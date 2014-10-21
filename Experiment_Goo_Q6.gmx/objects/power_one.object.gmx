@@ -58,11 +58,11 @@ buffer_bk = 15;
 buffer_af = 0;
 
 //Resources
-life = 10000;
+life = 900;//10000;
 will = 2000;
 shield = 400;
 goo = 1;
-bar = 5000;
+bar = 50;
 boost = 100;
 charge = 0;
 stock = 3;

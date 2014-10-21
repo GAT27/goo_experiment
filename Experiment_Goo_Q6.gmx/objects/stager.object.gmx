@@ -41,16 +41,17 @@ hstun = 0;
 wall_l = instance_create(0,0,groundf);
 wall_r = instance_create(0,0,groundf);
 xxb = 0;
-yyb = 1;
-rot = 0;
+//yyb = 1;
+//rot = 0;
 target_x = 0;
 target_y = 0;
 target_z = 0;
 clock_s = 0;
 //globalvar player_one;
 //globalvar player_two;
-surf0 = 0;
-lag_scr = 0;
+surf0 = -1;
+debugg = 0;
+//lag_scr = 0;
 //application_surface_enable(false);
 
 // initialize 3D
@@ -212,31 +213,31 @@ if donce == 2//Initial selection
         //Colors based on "http://colorizer.org/"
         switch data&amp;127
         {
-            case 0:     //sprite_assign(block_tmp,block_red);
+            case 1:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 0; cS = 100; cV = 85;
                         break;
-            case 1:     //sprite_assign(block_tmp,block_red);
+            case 2:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 240; cS = 100; cV = 80;
                         break;
-            case 2:     //sprite_assign(block_tmp,block_red);
+            case 3:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 60; cS = 100; cV = 90;
                         break;
-            case 3:     //sprite_assign(block_tmp,block_red);
+            case 4:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 130; cS = 100; cV = 45;
                         break;
-            case 4:     //sprite_assign(block_tmp,block_red);
+            case 5:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 320; cS = 100; cV = 65;
                         break;
-            case 5:     //sprite_assign(block_tmp,block_red);
+            case 6:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 170; cS = 100; cV = 90;
                         break;
-            case 6:     //sprite_assign(block_tmp,block_red);
+            case 7:     //sprite_assign(block_tmp,block_red);
                         data = power_one;
                         cH = 0; cS = 0; cV = 70;
                         break;
@@ -332,7 +333,8 @@ else if donce//Move again after pause or lag
             <kind>1</kind>
             <string>///STAGER
 
-if g_ready//Game is in motion
+//Game is in motion
+if g_ready
 {
     //Check for end, otherwise, send player data
     if data&amp;1 or (data&gt;&gt;10)&amp;1 or clock_s&lt;0
@@ -447,7 +449,8 @@ if g_ready//Game is in motion
         y = player_two.y - 64;
 }
 
-else if !donce//Prepare to pause game
+//Prepare to pause game
+else if !donce
     donce++;
 
 </string>
@@ -478,7 +481,7 @@ d3d_set_lighting(false);
     
 hud_w = display_get_gui_width();
 hud_h = display_get_gui_height();
-hud_s = min(hud_w,hud_h);
+hud_s = min(hud_w,hud_h) * 0.8;
 if surface_get_width(application_surface) != hud_w
 or surface_get_height(application_surface) != hud_h
 {
@@ -492,11 +495,15 @@ or surface_get_height(application_surface) != hud_h
     
 draw_set_font(HUD_test);
 
-if g_ready//Realtime display
+//Realtime display
+if g_ready
 {
     //Calc and setup for display
     if surface_exists(surf0)
+    {
         surface_free(surf0);
+        surf0 = -1;
+    }
     ////
     if !player_one.goo
         var rot_b1 = 90;
@@ -517,27 +524,42 @@ if g_ready//Realtime display
         var rot_b2 = 90 * (260+40*player_two.goo-540) / 540;
     var ellx_b2 = hud_s * (1-dsin(rot_b2)) / 2;
     var elly_b2 = hud_s * (1-dcos(rot_b2)) / 2;
-    var rot_g2 = 90 * (540-player_two.bar) / 540;
+    var rot_g2 = 90 * (player_two.bar-540) / 540;
     var ellx_g2 = hud_s * (1-dsin(rot_g2)) / 2;
     var elly_g2 = hud_s * (1-dcos(rot_g2)) / 2;
     var rot_c2 = 90 * (300+40*player_two.goo-540) / 540;
     var ellx_c2 = hud_s * (1-dsin(rot_c2)) / 2;
     var elly_c2 = hud_s * (1-dcos(rot_c2)) / 2;
     ////
-    var rot_w = 90 * (2000-player_one.will) / 2000;
+    var rot_r = -40;
+    //xxb++;
+    var scl_r = 0.25;
+    //var ellx_r = hud_s * (1-dsin(rot_r) + dsin(rot_r)*(1-scl_r)) / 2;
+    var ellx_r = hud_s * (1-dsin(rot_r)*scl_r) / 2;
+    var elly_r = hud_s * (1-dcos(rot_r)*scl_r) / 2;
+    var rot_h1 = 180 * ((player_one.charge/20/player_one.stock) - 1);
+    var ellx_h1 = hud_s * (1-dsin(rot_h1)) / 2;
+    var elly_h1 = hud_s * (1-dcos(rot_h1)) / 2;
+    var rot_h2 = 180 * ((player_two.charge/20/player_two.stock) - 1);
+    var ellx_h2 = hud_s * (1-dsin(rot_h2)) / 2;
+    var elly_h2 = hud_s * (1-dcos(rot_h2)) / 2;
+    ////
+    var rot_w = 90 * (1 - (player_one.will/2000));
     var ellx_w = hud_s * (1-dsin(rot_w)) / 2;
     var elly_w = hud_s * (1-dcos(rot_w)) / 2;
-    var rot_s1 = 90 * (2000-player_one.shield) / 2000;
+    var rot_s1 = 90 * (1 - (player_one.shield/2000));
     var ellx_s1 = hud_s * (1-dsin(rot_s1)) / 2;
     var elly_s1 = hud_s * (1-dcos(rot_s1)) / 2;
-    var rot_s2 = 90 * (player_two.shield-2000) / 2000;
+    var rot_s2 = 90 * ((player_two.shield/2000) - 1);
     var ellx_s2 = hud_s * (1-dsin(rot_s2)) / 2;
     var elly_s2 = hud_s * (1-dcos(rot_s2)) / 2;
     ////
-    plah = 0.9;
+    var plah = 0.9;
+    var plav = 0.1;
     draw_set_circle_precision(48);
     surf1 = surface_create(hud_s,hud_s);
     surf2 = surface_create(hud_s,hud_s);
+    surf3 = surface_create(hud_s,hud_s);
     surface_set_target(surf1);
     draw_clear_alpha(c_black,0);
     surface_set_target(surf2);
@@ -575,8 +597,11 @@ if g_ready//Realtime display
     draw_set_blend_mode(bm_normal);
     surface_reset_target();
     draw_surface_part_ext(surf1,0,0,hud_s/2,hud_s/2,
-                          hud_w*(1-plah)/2,hud_h*0.08,
-                          2*hud_w*0.35/hud_s,2*hud_h*0.14/hud_s,-1,1);
+                          (1-plah)*hud_w/2,
+                          (plav-0.02)*hud_h,
+                          (plah+0.1)*0.35*2*hud_w/hud_s,
+                          0.14*2*hud_h/hud_s,
+                          -1,1);
     surface_set_target(surf1);
     draw_clear_alpha(c_black,0);
     surface_set_target(surf2);
@@ -607,15 +632,123 @@ if g_ready//Realtime display
     surface_reset_target();
     draw_surface_general(surf2,hud_s/2,0,hud_s/2,hud_s/2,
                          ellx_c2,elly_c2,-1,1,rot_c2,-1,-1,-1,-1,1);
-    //
+    ////
     draw_set_blend_mode(bm_subtract);
     //draw_ellipse_color(0,hud_s*0.35,hud_s,hud_s*0.75,-1,-1,false);
     draw_circle(hud_s/2,hud_s*0.75,hud_s/2,false);
     draw_set_blend_mode(bm_normal);
     surface_reset_target();
     draw_surface_part_ext(surf1,hud_s/2,0,hud_s/2,hud_s/2,
-                          hud_w-hud_w*0.35-hud_w*(1-plah)/2,hud_h*0.08,
-                          2*hud_w*0.35/hud_s,2*hud_h*0.14/hud_s,-1,1);
+                          (plah-1)*hud_w/2 - (plah+0.1)*0.35*hud_w + hud_w,
+                          (plav-0.02)*hud_h,
+                          (plah+0.1)*0.35*2*hud_w/hud_s,
+                          0.14*2*hud_h/hud_s,
+                          -1,1);
+    surface_set_target(surf1);
+    draw_clear_alpha(c_black,0);
+    surface_set_target(surf2);
+    draw_clear_alpha(c_black,0);
+    surface_set_target(surf3);
+    draw_clear_alpha(c_black,0);
+    
+    //Player 1 stock and charge
+    draw_circle_color(hud_s/2,hud_s/2,hud_s/2,
+                      c_red,c_red,false);
+    surface_reset_target();
+    draw_surface_general(surf3,hud_s/2,0,hud_s/2,hud_s,
+                         ellx_h1,elly_h1,1,1,rot_h1,-1,-1,-1,-1,1);
+    surface_copy(surf3,0,0,surf2);
+    draw_surface_ext(surf3,0,0,1,1,0,-1,0.8);
+    surface_set_target(surf3);
+    draw_clear_alpha(c_black,0);
+    ////
+    for(var i=0;i&lt;player_one.stock;i++)
+        draw_circle_color(hud_s/2 + hud_s*(0.5+0.4)/2*dsin((10+20*i) * 180/20/player_one.stock),
+                          hud_s/2 + hud_s*(0.5+0.4)/2*dcos((10+20*i) * 180/20/player_one.stock),
+                          hud_s*(0.5-0.4)/2,
+                          color_one,color_one,false);
+    surface_reset_target();
+    draw_surface(surf3,0,0);
+    surface_reset_target();
+    draw_surface_general(surf2,hud_s/2,0,hud_s/2,hud_s,
+                         ellx_r,elly_r,scl_r,scl_r,rot_r,-1,-1,-1,-1,1);
+    ////
+    draw_set_blend_mode(bm_subtract);
+    draw_circle(hud_s/2,hud_s/2,hud_s*scl_r*0.4,false);
+    draw_set_blend_mode(bm_normal);
+    surface_reset_target();
+    draw_set_halign(fa_right);
+    line = "    " + string(player_one.life);
+    for(i=5;i&gt;0;i--)
+    {
+        var rot_l = rot_r + (5.5-i)*180/5;
+        //var ellx_l = hud_s*(1-dsin(rot_l) + dsin(rot_l)*(1-1*scl_r*1.3))/2 + ((1-plah*0.9)*hud_w-hud_s)/2;
+        var ellx_l = (hud_s*(1-dsin(rot_l)*scl_r*1.3) + (1-plah*0.9)*hud_w-hud_s)/2;
+        var elly_l = hud_s*(1-dcos(rot_l)*scl_r*1.3)/2 + (-0.15+plav)*hud_h;
+        draw_text_transformed_color(ellx_l,// ellx_r + /*1.02*/((1-plah*0.95)*hud_w-hud_s)/2 + /*(5-i)*/hud_s*scl_r*1.5 * (1-dsin(rot_l1)) / 2,
+                                    elly_l,// elly_r + /*1.22*/(-0.2+plav)*hud_h + /*(5-i)*/hud_s*scl_r*1.5 * (1-dcos(rot_l1)) / 2,
+                                    string_char_at(line,string_length(string(player_one.life))+i-1),
+                                    hud_w/view_wview[0],
+                                    hud_h/view_hview[0],
+                                    rot_l,0,0,0,0,1);
+    }
+    draw_set_halign(fa_left);
+    draw_surface_ext(surf1,
+                     ((1-plah*0.9)*hud_w-hud_s)/2,
+                     (-0.15+plav)*hud_h,
+                     1,1,0,-1,1);
+    //draw_surface(surf1,0,0);
+    surface_set_target(surf1);
+    draw_clear_alpha(c_black,0);
+    surface_set_target(surf2);
+    draw_clear_alpha(c_black,0);
+    surface_set_target(surf3);
+    draw_clear_alpha(c_black,0);
+    
+    //Player 2 stock and charge
+    draw_circle_color(hud_s/2,hud_s/2,hud_s/2,
+                      c_red,c_red,false);
+    surface_reset_target();
+    draw_surface_general(surf3,hud_s/2,0,hud_s/2,hud_s,
+                         ellx_h2,elly_h2,1,1,rot_h2,-1,-1,-1,-1,1);
+    surface_copy(surf3,0,0,surf2);
+    draw_surface_ext(surf3,0,0,1,1,0,-1,0.8);
+    surface_set_target(surf3);
+    draw_clear_alpha(c_black,0);
+    ////
+    for(i=0;i&lt;player_two.stock;i++)
+        draw_circle_color(hud_s/2 + hud_s*(0.5+0.4)/2*dsin((10+20*i) * 180/20/player_two.stock),
+                          hud_s/2 + hud_s*(0.5+0.4)/2*dcos((10+20*i) * 180/20/player_two.stock),
+                          hud_s*(0.5-0.4)/2,
+                          color_two,color_two,false);
+    surface_reset_target();
+    draw_surface(surf3,0,0);
+    surface_reset_target();
+    draw_surface_general(surf2,hud_s/2,0,hud_s/2,hud_s,
+                         ellx_r,elly_r,scl_r,scl_r,rot_r,-1,-1,-1,-1,1);
+    ////
+    draw_set_blend_mode(bm_subtract);
+    draw_circle(hud_s/2,hud_s/2,hud_s*scl_r*0.4,false);
+    draw_set_blend_mode(bm_normal);
+    surface_reset_target();
+    draw_set_halign(fa_right);
+    line = string(player_two.life) + "    ";
+    for(i=1;i&lt;=5;i++)
+    {
+        rot_l = -(rot_r + (i-0.5)*180/5);
+        ellx_l = (hud_s*(1-dsin(rot_l)*scl_r*1.3) + (1+plah*0.9)*hud_w-hud_s)/2;
+        elly_l = hud_s*(1-dcos(rot_l)*scl_r*1.3)/2 + (-0.15+plav)*hud_h;
+        draw_text_transformed_color(ellx_l,elly_l,
+                                    string_char_at(line,i),
+                                    hud_w/view_wview[0],
+                                    hud_h/view_hview[0],
+                                    rot_l,0,0,0,0,1);
+    }
+    draw_set_halign(fa_left);
+    draw_surface_ext(surf1,
+                     ((1+plah*0.9)*hud_w+hud_s)/2,
+                     (-0.15+plav)*hud_h,
+                     -1,1,0,-1,1);
     surface_set_target(surf1);
     draw_clear_alpha(c_black,0);
     surface_set_target(surf2);
@@ -674,35 +807,14 @@ if g_ready//Realtime display
     draw_circle(hud_s/2,hud_s*0.6,hud_s/2,false);
     draw_set_blend_mode(bm_normal);
     surface_reset_target();
-    draw_surface_stretched(surf1,hud_w*(1-plah)/2,hud_h*0.05,hud_w*plah,hud_h*0.3);
+    draw_surface_stretched(surf1,
+                           (1-plah)*hud_w/2,
+                           (plav-0.05)*hud_h,
+                           plah*hud_w,
+                           hud_h*0.3);
+    surface_free(surf3);
     surface_free(surf2);
     surface_free(surf1);
-    
-    //Player 1 decay stats
-    for(var i=0;i&lt;16;i++)
-    {
-        switch i%8
-        {
-            case 0: line = 'still: '; break;
-            case 1: line = 'tilt:  '; break;
-            case 2: line = 'rush:  '; break;
-            case 3: line = 'down:  '; break;
-            case 4: line = 'up:    '; break;
-            case 5: line = 'nair:  '; break;
-            case 6: line = 'fair:  '; break;
-            case 7: line = 'dair:  '; break;
-        }
-        if i &lt; 8
-            line += string(player_one.action[64+i*16,4]);
-        else
-            line += string(player_one.action[72+(i-8)*16,4]);
-        draw_text_transformed_color(0, hud_h * (0.3 + 0.02*i),
-                                    line,
-                                    0.3*hud_w/view_wview[0],
-                                    0.3*hud_h/view_hview[0],
-                                    0,lerp(c_navy,c_maroon,(i-i%8)/8),lerp(c_navy,c_maroon,(i-i%8)/8),
-                                    lerp(c_navy,c_maroon,(i-i%8)/8),lerp(c_navy,c_maroon,(i-i%8)/8),1);
-    }
     
     //Setup debug display
     if player_one.combo
@@ -734,54 +846,84 @@ if g_ready//Realtime display
         dombo = 0;
     }
     
-    //Player 1 debug
-    for(i=0;i&lt;10;i++)
+    //Show debug
+    if debugg
     {
-        switch i
+        //Player 1 decay stats
+        for(i=0;i&lt;16;i++)
         {
-            case 0: line = 'Raw: ' + string(player_one.raw); break;
-            case 1: line = 'Output: ' + string(player_one.output); break;
-            case 2: line = 'Total: ' + string(player_one.dotal); break;
-            case 3: line = 'Ground: ' + string(player_one.grounded); break;
-            case 4: line = 'Ping: ' + string(puppeteer.ping_avr); break;
-            ////
-            case 5: line = 'State: ' + string(player_one.state); break;
-            case 6: line = 'Buffer: ' + string(player_one.buffer_mtr); break;
-            case 7: line = 'Combo: ' + string(player_one.dombo); break;
-            case 8: line = 'Gravity: ' + string(player_one.gvy); break;
-            case 9: line = '1000ms: ' + string(puppeteer.ping_m); break;
+            switch i%8
+            {
+                case 0: line = 'still: '; break;
+                case 1: line = 'tilt:  '; break;
+                case 2: line = 'rush:  '; break;
+                case 3: line = 'down:  '; break;
+                case 4: line = 'up:    '; break;
+                case 5: line = 'nair:  '; break;
+                case 6: line = 'fair:  '; break;
+                case 7: line = 'dair:  '; break;
+            }
+            if i&lt;8
+                line += string(player_one.action[64+i*16,4]);
+            else
+                line += string(player_one.action[72+(i-8)*16,4]);
+            draw_text_transformed_color(0,hud_h*(0.3+0.02*i),
+                                        line,
+                                        0.3*hud_w/view_wview[0],
+                                        0.3*hud_h/view_hview[0],
+                                        0,lerp(c_navy,c_maroon,(i-i%8)/8),lerp(c_navy,c_maroon,(i-i%8)/8),
+                                        lerp(c_navy,c_maroon,(i-i%8)/8),lerp(c_navy,c_maroon,(i-i%8)/8),1);
         }
-        draw_text_transformed_color(hud_w * (0.10 + 0.12*(i-i%5)/5),
-                                    hud_h * (0.30 + 0.03*(i%5)),
-                                    line,
-                                    0.4*hud_w/view_wview[0],
-                                    0.4*hud_h/view_hview[0],
-                                    0,c_fuchsia,c_fuchsia,c_fuchsia,c_fuchsia,1);
-    }
-    
-    //Player 2 debug
-    for(i=0;i&lt;10;i++)
-    {
-        switch i
+        
+        //Player 1 debug
+        for(i=0;i&lt;10;i++)
         {
-            case 0: line = 'Raw: ' + string(player_two.raw); break;
-            case 1: line = 'Output: ' + string(player_two.output); break;
-            case 2: line = 'Total: ' + string(player_two.dotal); break;
-            case 3: line = 'Ground: ' + string(player_two.grounded); break;
-            case 4: line = 'Ping: ' + string(puppeteer.ping_avr); break;
-            ////
-            case 5: line = 'State: ' + string(player_two.state); break;
-            case 6: line = 'Buffer: ' + string(player_two.buffer_mtr); break;
-            case 7: line = 'Combo: ' + string(player_two.dombo); break;
-            case 8: line = 'Gravity: ' + string(player_two.gvy); break;
-            case 9: line = '1000ms: ' + string(puppeteer.ping_m); break;
+            switch i
+            {
+                case 0: line = 'Raw: ' + string(player_one.raw); break;
+                case 1: line = 'Output: ' + string(player_one.output); break;
+                case 2: line = 'Total: ' + string(player_one.dotal); break;
+                case 3: line = 'Ground: ' + string(player_one.grounded); break;
+                case 4: line = 'Ping: ' + string(puppeteer.ping_avr); break;
+                
+                case 5: line = 'State: ' + string(player_one.state); break;
+                case 6: line = 'Buffer: ' + string(player_one.buffer_mtr); break;
+                case 7: line = 'Combo: ' + string(player_one.dombo); break;
+                case 8: line = 'Gravity: ' + string(player_one.gvy); break;
+                case 9: line = '1000ms: ' + string(puppeteer.ping_m); break;
+            }
+            draw_text_transformed_color(hud_w*(0.10+0.12*(i-i%5)/5),
+                                        hud_h*(0.30+0.03*(i%5)),
+                                        line,
+                                        0.4*hud_w/view_wview[0],
+                                        0.4*hud_h/view_hview[0],
+                                        0,c_fuchsia,c_fuchsia,c_fuchsia,c_fuchsia,1);
         }
-        draw_text_transformed_color(hud_w * (0.68 + 0.12*(i-i%5)/5),
-                                    hud_h * (0.30 + 0.03*(i%5)),
-                                    line,
-                                    0.4*hud_w/view_wview[0],
-                                    0.4*hud_h/view_hview[0],
-                                    0,c_fuchsia,c_fuchsia,c_fuchsia,c_fuchsia,1);
+        
+        //Player 2 debug
+        for(i=0;i&lt;10;i++)
+        {
+            switch i
+            {
+                case 0: line = 'Raw: ' + string(player_two.raw); break;
+                case 1: line = 'Output: ' + string(player_two.output); break;
+                case 2: line = 'Total: ' + string(player_two.dotal); break;
+                case 3: line = 'Ground: ' + string(player_two.grounded); break;
+                case 4: line = 'Ping: ' + string(puppeteer.ping_avr); break;
+                
+                case 5: line = 'State: ' + string(player_two.state); break;
+                case 6: line = 'Buffer: ' + string(player_two.buffer_mtr); break;
+                case 7: line = 'Combo: ' + string(player_two.dombo); break;
+                case 8: line = 'Gravity: ' + string(player_two.gvy); break;
+                case 9: line = '1000ms: ' + string(puppeteer.ping_m); break;
+            }
+            draw_text_transformed_color(hud_w*(0.68+0.12*(i-i%5)/5),
+                                        hud_h*(0.30+0.03*(i%5)),
+                                        line,
+                                        0.4*hud_w/view_wview[0],
+                                        0.4*hud_h/view_hview[0],
+                                        0,c_fuchsia,c_fuchsia,c_fuchsia,c_fuchsia,1);
+        }
     }
     
     /*
@@ -789,7 +931,7 @@ if g_ready//Realtime display
      draw_vertex_colour(100, 100, c_blue, 0.1);
      draw_vertex_colour(100, 200, c_red, 0.1);
      draw_vertex_colour(150, 150, c_green, 1);
-     draw_primitive_end();*/
+     draw_primitive_end();
     
     //Player 1 stock and charge
     d3d_primitive_begin(pr_trianglestrip);
@@ -881,7 +1023,8 @@ if g_ready//Realtime display
     //d3d_set_lighting(true);
 }
 
-else//Frozen display
+//Frozen display
+else
 {
     if surface_exists(surf0)
         draw_surface(surf0,0,0);
