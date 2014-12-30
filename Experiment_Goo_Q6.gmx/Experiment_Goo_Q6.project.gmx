@@ -406,11 +406,11 @@
     <sprite>sprites\block_red</sprite>
     <sprite>sprites\ground</sprite>
     <sprite>sprites\power_one_hurtbox</sprite>
-    <sprite>sprites\ticketer_set</sprite>
-    <sprite>sprites\actor_set</sprite>
-    <sprite>sprites\director_set</sprite>
+    <sprite>sprites\controller_set</sprite>
+    <sprite>sprites\actor_one_set</sprite>
     <sprite>sprites\puppeteer_set</sprite>
     <sprite>sprites\stager_set</sprite>
+    <sprite>sprites\director_set</sprite>
     <sprite>sprites\char_tmp</sprite>
     <sprite>sprites\stage_green</sprite>
     <sprite>sprites\stage_yellow</sprite>
@@ -422,7 +422,7 @@
     <sprite>sprites\char_cyan_one</sprite>
     <sprite>sprites\char_white_one</sprite>
     <sprite>sprites\cursor</sprite>
-    <sprite>sprites\bubble</sprite>
+    <sprite>sprites\sprReactor</sprite>
   </sprites>
   <backgrounds name="background">
     <background>background\back_tmp</background>
@@ -452,9 +452,8 @@
   <objects name="objects">
     <object>objects\hitbox</object>
     <object>objects\groundf</object>
-    <object>objects\ticketer</object>
     <object>objects\director</object>
-    <object>objects\actor</object>
+    <object>objects\controller</object>
     <object>objects\puppeteer</object>
     <object>objects\stager</object>
     <object>objects\power_one</object>
@@ -469,22 +468,21 @@
     <object>objects\yellow_stg</object>
     <object>objects\cursor_select_one</object>
     <object>objects\cursor_select_two</object>
-    <object>objects\bubble_host</object>
     <object>objects\obj_model</object>
     <object>objects\object1</object>
     <object>objects\obj_camera</object>
     <object>objects\obj3</object>
+    <object>objects\actor_one</object>
     <object>objects\power_one_m1</object>
   </objects>
   <rooms name="rooms">
-    <room>rooms\startup_room</room>
     <room>rooms\stage_room</room>
     <room>rooms\battle_room</room>
     <room>rooms\replay_room</room>
   </rooms>
   <constants number="2">
-    <constant name="GM_build_date">41933.7452126042</constant>
-    <constant name="GM_version">'100'</constant>
+    <constant name="GM_build_date">41903.1193723032</constant>
+    <constant name="GM_version">'1.0.0.0'</constant>
   </constants>
   <help>
     <rtf>help.rtf</rtf>

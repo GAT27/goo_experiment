@@ -51,7 +51,7 @@
     <view visible="0" objName="&lt;undefined&gt;" xview="0" yview="0" wview="640" hview="480" xport="0" yport="0" wport="640" hport="480" hborder="32" vborder="32" hspeed="-1" vspeed="-1"/>
   </views>
   <instances>
-    <instance objName="actor" x="32" y="384" name="inst_141B483C" locked="0" code="" scaleX="1" scaleY="1" colour="4294967295" rotation="0"/>
+    <instance objName="controller" x="32" y="384" name="inst_141B483C" locked="0" code="" scaleX="1" scaleY="1" colour="4294967295" rotation="0"/>
     <instance objName="director" x="128" y="384" name="inst_9A12EB9D" locked="0" code="" scaleX="1" scaleY="1" colour="4294967295" rotation="0"/>
     <instance objName="card_red_one" x="320" y="160" name="inst_5A24C45B" locked="0" code="" scaleX="1" scaleY="1" colour="4294967295" rotation="0"/>
     <instance objName="card_blue_one" x="512" y="160" name="inst_D744427C" locked="0" code="" scaleX="1" scaleY="1" colour="4294967295" rotation="0"/>
