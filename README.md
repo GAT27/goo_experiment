@@ -1,4 +1,4 @@
-goo_experiment
+Goo
 ==============
 Development preview, need to be imported into GameMaker Studio to play/test.
 
