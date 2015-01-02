@@ -28,10 +28,10 @@
             <string>
 
 
-scr_create_animation_vertex_format();//create animation format.
+//scr_create_animation_vertex_format();//create animation format.
 
 //animation
-animation = scr_load_animation("./animation",1,15,"./animation_000001.mtl");//load animation
+//animation = scr_load_animation("./animation",1,15,"./animation_000001.mtl");//load animation
 //We only need 1 material file, as every other exportet .mtl File has the same information anyway.
 
 animation_length = room_speed*7; //specify the animation length/speed for 1 animation loop (room_speed*7 = 7 seconds)
@@ -106,7 +106,7 @@ if (animation_step&gt;=animation_length){
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>    var pc = (animation_step/animation_length);
+            <string>    /*var pc = (animation_step/animation_length);
     var frame_count = ds_list_size(animation);
     
     
@@ -116,7 +116,7 @@ if (animation_step&gt;=animation_length){
     
 draw_text(0,16,"Interpolating between frame: "+string(currentframe+1)+"-"+string(nextframe+1));
 draw_text(0,32,"Interpolation value: "+string(pc*frame_count-floor(pc*frame_count)));
-draw_text(0,64,"Press &amp; hold the left mouse button to move the camera.#Use the mouse wheel to zoom in and out.");
+draw_text(0,64,"Press &amp; hold the left mouse button to move the camera.#Use the mouse wheel to zoom in and out.");*/
 </string>
           </argument>
         </arguments>
@@ -139,7 +139,7 @@ draw_text(0,64,"Press &amp; hold the left mouse button to move the camera.#Use t
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>draw_set_color(c_white);
+            <string>/*draw_set_color(c_white);
 
 //use animation shader
 shader_set(sh_blend);
@@ -152,7 +152,7 @@ shader_set(sh_blend);
     //draw animation
     scr_draw_animation_frame(animation,animation_step,animation_length);
        
-shader_reset();
+shader_reset();*/
    
 </string>
           </argument>

@@ -33,39 +33,42 @@ state = 0;
 combo = 0;
 trig_ch = 0;
 trig_ps = -1;
-airborne = 0;
-hlag = 0;
+trig_bk = 0;
 hit_sty = 0;
+hlag = 0;
+brek = 0;
 abox = ds_list_create();
 
 //Gravity
-grav = 0.6;
-gvy = 0;
-gvydam = 0;
+grav = 0.6;//Constant gravity
+gvy = 0;//Variable added gravity
+gvydam = 0;//Damage induced gravity
 
 //Jumping
-jlag = 3;
-plag = -1;
-djmp = 1;
-grounded = 1;
-lifted = 0;
-walled = 0;
+jlag = 3;//Constant jump wait (ground to air)
+plag = -1;//Variable jump prepare counter
+djmp = 1;//Double jump
+grounded = 1;//Ground state
+lifted = 0;//Ground attack that goes aerial
+airborne = 0;//Neutral air state after action
+ffall = 0;//Down dashable air attack
+walled = 0;//Against wall state
 
 //Buffer
-buffer_mtr = 60;
+buffer_mtr = 60;//Allows performing
 buffer_ch = 0;//may be useless
-buffer_bk = 15;
-buffer_af = 0;
+buffer_bk = 15;//Stores arrow inputs
+buffer_af = 0;//Keeps track of frame advancement
 
 //Resources
-life = 900;//10000;
+life = 10000;//10000;
 will = 2000;
 shield = 400;
 goo = 1;
-bar = 50;
+bar = 5000;
 boost = 100;
 charge = 0;
-stock = 3;
+stock = 3;//3
 ailment = 0;
 
 //Skills
@@ -84,9 +87,9 @@ stamina_cor = 1;
 
 //Movement
 walk_sp[4] = 3;//F walk
-walk_sp[5] = 6;//F dash
+walk_sp[5] = 15//6;//F dash
 walk_sp[7] = 5;//B walk
-walk_sp[8] = 6;//B dash
+walk_sp[8] = 15//6;//B dash
 walk_sp[17] = 2;//F jump
 walk_sp[19] = 10;//FA dash
 walk_sp[20] = 2;//B jump
@@ -107,13 +110,14 @@ charge_bck = walk_sp[7];
 
 //Dashing
 dash = 0;
-dasl[5] = 10;//F len
-dasl[8] = 5;//B len
+dasl[5] = 20//10;//F len
+dasl[8] = 20//5;//B len
 dasl[19] = 2;//FA len
 dasl[22] = 2;//BA len
 dasl[27] = 2;//D len
-dast = 0;
-dasc = 13+2;
+dast = 0;//Dash trigger
+dasc = 13+2;//Dash counter
+dask = 0;//Dash breaking
 
 //Attacking
 action[64,4] = 1;//sW
@@ -209,17 +213,20 @@ blocks[96,0] = 0.1;
 blocks[96,1] = 5;
 blocks[96,2] = 2;
 
-action[104,4] = 1;//rS
-action[104,0] = 5;
-action[104,1] = 10;
-action[104,2] = 5;
-action[104,3] = 0;
-damage[104,0] = 100*power_cor;
-damage[104,1] = 5;
-damage[104,2] = 3;
-blocks[104,0] = 0.1;
-blocks[104,1] = 30;
-blocks[104,2] = 1;
+for (var i=0;i&lt;2;i++)
+{
+    action[104+i,4] = 1;//rS
+    action[104+i,0] = 15;
+    action[104+i,1] = 11;
+    action[104+i,2] = 5;
+    action[104+i,3] = 0;
+    damage[104+i,0] = 20*power_cor;
+    damage[104+i,1] = 15;
+    damage[104+i,2] = 1;
+    blocks[104+i,0] = 0.1;
+    blocks[104+i,1] = 30;
+    blocks[104+i,2] = 1;
+}
 
 action[112,4] = 1;//cW
 action[112,0] = 5;
@@ -398,15 +405,13 @@ blocks[192,1] = 30;
 blocks[192,2] = 1;
 
 //Shaders
-//scr_create_animation_vertex_format();
-skin = stager.color_one;
-anim = scr_load_animation("./ch_test2_b",1,2);
+anim = scr_load_animation("./ch_test2.bao",true);
 anim_l[0] = room_speed*1;
-anim_s[0] = 0;
-//global.shader_interpol = shader_get_uniform(sh_blend,"u_interpol");
+anim_s[0] = -1;
 shader_ambientColor = shader_get_uniform(sh_blend,"uAmbientColor");
 shader_lightDirection = shader_get_uniform(sh_blend,"uLightingDirection");
 shader_lightDirectionalColor = shader_get_uniform(sh_blend,"uDirectionalColor");
+shader_worldMatTranspInv = shader_get_uniform(sh_blend,"uMatWorldTransInv");
 z = -5;
 
 </string>
@@ -451,6 +456,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
     hbox = cbox[0];
     move = cbox[1];
     frame = cbox[2];
+    buffer_af = cbox[3];
     s_part = cbox[8];
     t_part = cbox[9];
     hfirm = cbox[10];
@@ -459,7 +465,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
     
     switch move
     {
-        case 64:    switch frame
+        case 64:    switch frame//sW
                     {
                         case 1:     hspeed = 0;
                                     break;
@@ -564,7 +570,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                     }
                     break;
                     
-        case 72:    switch frame
+        case 72:    switch frame//sS
                     {
                         case 1:     hspeed = 0.5 * (backward-5);
                                     break;
@@ -595,7 +601,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                     }
                     break;
                     
-        case 80:    switch frame
+        case 80:    switch frame//tW
                     {
                         case 1:     if !s_part
                                     {
@@ -639,7 +645,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                     }
                     break;
                     
-        case 88:    switch frame
+        case 88:    switch frame//tS
                     {
                         case 1:     if !s_part
                                     {
@@ -716,7 +722,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                                         if t_part==5
                                         {
                                             cbox[3] = 0;
-                                            nbox[0] = 0;
+                                            nbox[0] = -1;
                                             nbox[1] = move;
                                             nbox[2] = 1;
                                             nbox[3] = 0;
@@ -763,7 +769,7 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                     }
                     break;
                     
-        case 96:    switch frame
+        case 96:    switch frame//rW
                     {
                         case 1:     if state==5
                                         hspeed = walk_sp[state] * (forward-5);
@@ -778,7 +784,10 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                                     lifted = 1;
                                     gvy = 0;
                                     if hfirm
+                                    {
+                                        buffer_mtr += buffer_af
                                         buffer_af = 0;
+                                    }
                                     if instance_exists(hbox) and hbox.hit and
                                     collision_rectangle(hbox.x,hbox.y,hbox.bx,hbox.by,
                                                         oppose,true,true)
@@ -831,25 +840,58 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                     }
                     break;
                     
-        case 104:   switch frame
+        case 104:   switch frame//rS
                     {
-                        case 1:     hspeed = 0;
+                        case 1:     hspeed = walk_sp[state] * (forward-5);
                                     break;
-                        case 2:     hspeed = 0;
+                        case 2:     hspeed = 0.4 * walk_sp[state] * (forward-5);
                                     hbox.hspeed = 2 * (forward-5);
-                                    if instance_exists(hbox) and 
-                                       collision_rectangle(hbox.x,hbox.y,hbox.bx,hbox.by,
-                                                           oppose,true,true)
+                                    if instance_exists(hbox) and hbox.hit and
+                                    collision_rectangle(hbox.x,hbox.y,hbox.bx,hbox.by,
+                                                        oppose,true,true)
                                     {
-                                        with hbox instance_destroy();
-                                        combo++;
+                                        hbox.hit = 0;
+                                        hit_sty = (38&lt;&lt;5) + (0&lt;&lt;3) + 3;
+                                        oppose.htate = move + hfirm;
+                                        oppose.hsphit = 0;
+                                        oppose.vsphit = 0;
+                                        oppose.hspdam = 0;
+                                        oppose.vspdam = 0;
+                                        oppose.gvydam = 0;
+                                        hfirm = 1;
+                                        if s_part==3
+                                        {
+                                            hit_sty = (48&lt;&lt;5) + (0&lt;&lt;3) + 3;
+                                            oppose.hsphit = 2 * (forward-5);
+                                            oppose.vsphit = -2;
+                                            oppose.gvydam = 0.2;
+                                        }
+                                    }
+                                    t_part++;
+                                    if !(t_part%3) and (t_part==(s_part+1)*3)
+                                    and (s_part&lt;3)
+                                    {
+                                        cbox[3] = 0;
+                                        nbox[0] = -1;
+                                        nbox[1] = move;
+                                        nbox[2] = 1;
+                                        nbox[3] = 0;
+                                        nbox[4] = 100 * (forward-5);
+                                        nbox[5] = sprite_height/2;
+                                        nbox[6] = 60;
+                                        nbox[7] = 60;
+                                        nbox[8] = s_part + 1;
+                                        nbox[9] = t_part;
+                                        nbox[10] = hfirm;
+                                        ds_list_add(abox,nbox);
+                                        hbox.hit = 0;
                                     }
                                     break;
                         case 3:     hspeed = 0;
                                     break;
                         case 4:     break;
-                        default:    htx = x + (100 * (forward-5));
-                                    hty = y - sprite_height/2;
+                        default:    htx = 100 * (forward-5);
+                                    hty = sprite_height/2;
                                     hzx = 60;
                                     hzy = 60;
                                     frame++;
@@ -956,7 +998,61 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
                     }
                     break;
                     
-        case 192:   switch frame
+        case 144:   vspeed = -walk_sp[23+6*(state&gt;=28)] + gvy;
+                    switch frame//nW
+                    {
+                        case 1:     ffall = 1;
+                                    break;
+                        case 2:     hbox.hspeed = hspeed;
+                                    hbox.vspeed = vspeed;
+                                    if instance_exists(hbox) and hbox.hit and
+                                    collision_rectangle(hbox.x,hbox.y,hbox.bx,hbox.by,
+                                                        oppose,true,true)
+                                    {
+                                        hbox.hit = 0;
+                                        hit_sty = (38&lt;&lt;5) + (0&lt;&lt;3) + 4;
+                                        oppose.htate = move;
+                                        oppose.hsphit = 0;
+                                        oppose.vsphit = 0;
+                                        oppose.hspdam = 0;
+                                        oppose.vspdam = 0;
+                                        oppose.gvydam = 0;
+                                    }
+                                    break;
+                        case 3:     if buffer_mtr&gt;=59
+                                    {
+                                        state = 23;
+                                        airborne = 1;
+                                        ffall = 0;
+                                    }
+                                    break;
+                        case 4:     break;
+                        default:    htx = 0;
+                                    hty = sprite_height/2;
+                                    hzx = 100;
+                                    hzy = 100;
+                                    frame++;
+                    }
+                    if grounded
+                    {
+                        buffer_mtr = 59;
+                        buffer_af = 0;
+                        state = 9;
+                        ffall = 0;
+                        switch frame
+                        {
+                            case 2: with hbox instance_destroy();
+                            case 3: //
+                            case 4: //
+                            case 5: //
+                            case 6: //
+                            case 1: frame = 6;
+                                    break;
+                        }
+                    }
+                    break;
+                    
+        case 192:   switch frame//nB
                     {
                         case 1:     hspeed = 0;
                                     break;
@@ -1014,9 +1110,11 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
         buffer_mtr = 58;
         hfirm = 0;
         buffer_af = 0;
-        nbox[0] = 0;
-        for(var j=11;j&gt;2;j--)
-            nbox[j-1] = 0;
+        nbox[0] = -1;
+        //for(var j=11;j&gt;2;j--)
+          //  nbox[j-1] = 0;
+        for(var j=10;j&gt;2;j--)
+            nbox[j] = 0;
         ds_list_add(abox,nbox);
     }
     if frame==6
@@ -1036,6 +1134,14 @@ for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
         cbox[9] = t_part;
         cbox[10] = hfirm;
     }
+}
+
+//Break chdecking
+if dask
+{
+    hspeed = dask;
+    vspeed = 0;
+    lifted = 0;
 }
 
 //Wall checking
@@ -1073,6 +1179,7 @@ if walled
 
 draw_self();
 //draw_set_color(c_white);
+texture_set_repeat(true);
 shader_set(sh_blend);
 shader_set_uniform_f(shader_ambientColor,0.3,0.3,0.3);
 shader_set_uniform_f(shader_lightDirection,0.5,-0.5,0.5);
@@ -1082,71 +1189,12 @@ d3d_transform_set_identity();
 d3d_transform_add_scaling(20,20,20);
 d3d_transform_add_rotation_x(270);
 d3d_transform_add_translation(x,y-64,z);
-scr_draw_animation_frame(anim,anim_s[0],anim_l[0]);
-d3d_transform_set_identity();
 
+var worldMat = scr_TranspoInverse(matrix_get(matrix_world));
+shader_set_uniform_f_array(shader_worldMatTranspInv,worldMat);
+scr_draw_animation_frame(anim,anim_s[0],anim_l[0],background_get_texture(skin));
+d3d_transform_set_identity();
 shader_reset();
-
-/*
-d3d_model_draw(anim, 0, 0, 0, -1);
-//d3d_model_draw(scr_draw_animation_frame(anim,anim_s[0],anim_l[0]), x, y, 0, -1);
-
-d3d_transform_set_identity();
-
-
-//d3d_transform_set_translation(20,20,10);
-d3d_transform_add_rotation_x(180);
-////d3d_transform_add_rotation_y(90);
-d3d_transform_add_scaling(20,20,10);
-d3d_transform_add_translation(x+15-15,y-60,0);
-//d3d_transform_add_translation(0,0,0)
-//kbVADrawModel(sprite_get_texture(block_tmp,0));
-
-
-d3d_transform_set_identity();*/
-//shader_reset();
-
-//d3d_set_lighting(true);
-//draw_set_color(c_gray);
-//d3d_start();
-
-//d3d_set_projection_ext(xf,yf,zf,xt,yt,zt,xu,yu,zu,ag,16/9,zn,zd);
-//d3d_set_projection_ext(0, 5, 10, 0, 0, 0, 0, 1, 0, 60, 4/3, 0.1, 1000);
-
-
-
-//hspeedp=hspeed;
-//vspeedp=vspeed;
-
-//htemp=hspeed;
-//hspeed=0;
-/*
-switch ct
-{
-    case 0:      xx+= htemp;break;
-    case 1:      stager.xf+= htemp;break;
-    case 2:      stager.yf+= htemp;break;
-    case 3:      stager.zf+= htemp;break;
-    case 4:      stager.xt+= htemp;break;
-    case 5:      stager.yt+= htemp;break;
-    case 6:      stager.zt+= htemp;break;
-    case 7:      stager.xu+= htemp;break;
-    case 8:      stager.yu+= htemp;break;
-    case 9:      stager.zu+= htemp;break;
-    //case 7:     stager.ag+= htemp;break;
-    //case 11:     stager.zn+= htemp;break;
-    //case 12:     stager.zd+= htemp;break;
-}
-
-
-//d3d_transform_set_identity();
-//kbVAAnimate();
-//d3d_end();
-//d3d_set_lighting(false);
-//myrotation += 1;
-//if(myrotation &gt; 360)
-//    myrotation -=360;
-
    
 </string>
           </argument>

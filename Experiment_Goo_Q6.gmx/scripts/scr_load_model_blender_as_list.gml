@@ -1,5 +1,5 @@
 //include normals. include UVs, triangulate faces!
-
+/*
 var anim;
 anim = file_text_open_read(argument[0]);
 
@@ -250,4 +250,4 @@ ds_list_destroy(vn_listY);
 ds_list_destroy(vn_listZ);
 
 
-return model;
+return model;*/

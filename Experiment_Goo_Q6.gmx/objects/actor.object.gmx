@@ -86,10 +86,8 @@ ini_close();
 data = 0;
 var p = 2;
 repeat 2
-{
-    if gamepad_is_connected(p-1)//Gamepad controls
-    {
-        //Pause
+{   if gamepad_is_connected(p-1)//Gamepad controls
+    {   //Pause
         if gamepad_button_check(p-1,gp_pause[p])
             p_button = 1;
         else
@@ -119,12 +117,11 @@ repeat 2
             
         //Player 1 debug select
         if gamepad_button_check_pressed(0,gp_debug) and instance_exists(stager)
-            stager.debugg = 1 - stager.debugg;
+            stager.debugg ^= 1;
     }
     ////
     else//Keyboard controls
-    {
-        //Pause
+    {   //Pause
         if keyboard_check(gp_pause[p])
             p_button = 1;
         else

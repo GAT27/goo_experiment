@@ -39,25 +39,24 @@ ping_h = 0;
 ping_m = 0;
 
 //Get file ready for reading
-globalvar file;
 if !score//Local setup
-{
+{   online = 0;
     if file_exists("record_l.txt")//Playback or recording
-    {
-        line = "record_l.txt";
-        online = 0;
+    {   line = "record_l.txt";
+        file = file_text_open_read(working_directory + line);
     }
     else//Playback of host
-    {
-        line = "record_h.txt";
+    {   if file_exists("record_h.txt")
+            line = "record_h.txt";
+        else//One game self loop
+            line = "record_c.txt";
+        file = file_text_open_read(working_directory + line);
         repeat 6 file_text_readln(file);
-        online = 1;
     }
-    file = file_text_open_read(working_directory + line);
+    
 }
 else//Online setup
-{
-    online = 1;
+{   online = 1;
     host = score - 1;
     if host
         line = "record_h.txt";
@@ -81,7 +80,7 @@ else//Online setup
     //connect = 0;
     data_t = ds_queue_create();
     buffer_pak = buffer_create(24,buffer_fixed,1);//in B: r[mMMMPPSSmMMM]|w[]
-    peer = network_create_server(network_socket_udp,port,2);
+    peer = network_create_server(network_socket_udp,port,1);
 }
 
 data1 = file_text_read_real(file);
@@ -93,50 +92,13 @@ file_text_readln(file);
 
 //Get file ready for recording, otherwise, playback
 if room == asset_get_index("battle_room")
-{
-    file_text_close(file);
+{   file_text_close(file);
     file = file_text_open_append(working_directory + line);
 }
 
 stager.data1 = data1;
 stager.data2 = data2;
 stager.data3 = data3&gt;&gt;2;
-
-</string>
-          </argument>
-        </arguments>
-      </action>
-    </event>
-    <event eventtype="2" enumb="0">
-      <action>
-        <libid>1</libid>
-        <id>603</id>
-        <kind>7</kind>
-        <userelative>0</userelative>
-        <isquestion>0</isquestion>
-        <useapplyto>-1</useapplyto>
-        <exetype>2</exetype>
-        <functionname></functionname>
-        <codestring></codestring>
-        <whoName>self</whoName>
-        <relative>0</relative>
-        <isnot>0</isnot>
-        <arguments>
-          <argument>
-            <kind>1</kind>
-            <string>///RETRY SERVER
-
-switch get_id
-{
-    case get_ip:    get_ip = http_get(request);
-                    break;
-    case get_lh:    get_lh = http_get(request);
-                    break;
-    case get_hs:    get_hs = http_get(request);
-                    break;
-    case get_cs:    get_cs = http_get(request);
-                    break;
-}
 
 </string>
           </argument>
@@ -163,10 +125,8 @@ switch get_id
             <string>///GAME READY
 
 if online
-{
-    if tick == -1
-    {
-        stager.g_ready = 0;
+{   if tick == -1
+    {   stager.g_ready = 0;
         stager.alarm[0] = stager.alarm[0] + 1;
     }
     else// if g_ready
@@ -206,7 +166,6 @@ if joystick_check_button(1, 4)
     file_text_close(file);
     file = file_text_open_read(working_directory + "record.txt");
 }
-
 if joystick_check_button(1, 3) and !playb
 {
     //file = file_text_open_append(working_directory + "record.txt");
@@ -214,7 +173,6 @@ if joystick_check_button(1, 3) and !playb
     file_text_writeln(file);
     //file_text_close(file);
 }
-
 if playb
 {
     data = file_text_read_real(file);
@@ -232,13 +190,10 @@ if playb
 
 //Recording
 if room==asset_get_index("battle_room")
-{
-    if online//Online
-    {
-        g_sync = 60 * stager.clock_s + stager.alarm[0];
-        if ds_queue_size(data_t)&lt;2
-        {
-            if host
+{   if online//Online
+    {   g_sync = 60 * stager.clock_s + stager.alarm[0];
+        if ds_queue_size(data_t) &lt; 2
+        {   if host
                 data &amp;= 1023;
             else
                 data = data&gt;&gt;10;
@@ -254,33 +209,28 @@ if room==asset_get_index("battle_room")
             ds_queue_enqueue(data_t,data);
         }
         
-        if ds_queue_size(data_t)==2
-        {
-            buffer_seek(buffer_pak,buffer_seek_start,12);
+        if ds_queue_size(data_t) == 2
+        {   buffer_seek(buffer_pak,buffer_seek_start,12);
             ping = buffer_read(buffer_pak,buffer_u32);
             g_past = buffer_read(buffer_pak,buffer_u16);
             ping = current_time - ping;
             if ping &lt; 1000
-            {
-                ping_h++;
+            {   ping_h++;
                 ping_avr = (ping + ping_avr * (ping_h-1)) / ping_h;
             }
             else
                 ping_m++;
             
             if (g_sync+1) &gt;= g_past
-            {
-                line = buffer_read(buffer_pak,buffer_u16);
+            {   line = buffer_read(buffer_pak,buffer_u16);
                 ping2 = buffer_read(buffer_pak,buffer_u32);
                 data = ds_queue_dequeue(data_t);
                 if host
                     data += (line&lt;&lt;10);
                 else
-                {
                     data = (data&lt;&lt;10) + line;
-                    file_text_write_real(file,((data&amp;1046528)&gt;&gt;2) + ((data&amp;1022)&gt;&gt;1));
-                    file_text_writeln(file);
-                }
+                file_text_write_real(file,((data&amp;1046528)&gt;&gt;2) + ((data&amp;1022)&gt;&gt;1));
+                file_text_writeln(file);
                 tick = 1;
             }
             else
@@ -289,28 +239,24 @@ if room==asset_get_index("battle_room")
     }
     ////
     else//Local
-    {
-        file_text_write_real(file,((data&amp;1046528)&gt;&gt;2) + ((data&amp;1022)&gt;&gt;1));
+    {   file_text_write_real(file,((data&amp;1046528)&gt;&gt;2) + ((data&amp;1022)&gt;&gt;1));
         file_text_writeln(file);
     }
 }
 
 //Playback
 else
-{
-    if file_text_eof(file)
+{   if file_text_eof(file)
         data = 1;
     else
-    {
-        line = file_text_read_real(file);
+    {   line = file_text_read_real(file);
         data = ((line&amp;261632)&lt;&lt;2) + (data&amp;1024) + ((line&amp;511)&lt;&lt;1) + (data&amp;1);
         file_text_readln(file);
     }
 }
 
 if !online or tick
-{
-    stager.data = data;
+{   stager.data = data;
     tick = 0;
 }
 
@@ -339,8 +285,7 @@ if !online or tick
             <string>///CONNECTION
 
 if ds_map_find_value(async_load,"type") == network_type_data
-{
-    //ipp[0] = ds_map_find_value(async_load,"ip");
+{   //ipp[0] = ds_map_find_value(async_load,"ip");
     //ipp[1] = ds_map_find_value(async_load,"port");
     //sz = ds_map_find_value(async_load,"size");
     //sock = ds_map_find_value(async_load,"socket");

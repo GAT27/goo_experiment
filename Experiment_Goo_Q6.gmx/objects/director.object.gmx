@@ -35,6 +35,7 @@ host = 0;
 score = host;
 select_char[1] = 0;
 select_char[2] = 0;
+select_char0 = 0;
 //select_stage = 1;
 cursor_select[1] = instance_find(cursor_select_one,0);
 cursor_select[2] = instance_find(cursor_select_two,0);
@@ -42,6 +43,7 @@ ini_open("controller.ini");
 username = ini_read_string("user","name","");
 ini_close();
 buffer_pak = buffer_create(8,buffer_fixed,1);//in B: r[cccC]|w[]
+site = "http://gatq.me/server_work/goo/storage.php?game="+string(game_id);
 
 /*punch(p) changes over time to represent different changes
 p &gt;= +3: Character p-1 selected, wait for resend
@@ -95,8 +97,11 @@ instance_create(480,352,yellow_stg);
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>network_send_udp(peer,ipp[0],ipp[1],buffer_pak,buffer_tell(buffer_pak));
-alarm[4] = 5;
+            <string>///OVERFLOW SIGNAL
+
+network_send_udp(peer,ipp[0],ipp[1],buffer_pak,buffer_tell(buffer_pak));
+alarm[3] = 5;
+
 </string>
           </argument>
         </arguments>
@@ -105,25 +110,25 @@ alarm[4] = 5;
     <event eventtype="2" enumb="2">
       <action>
         <libid>1</libid>
-        <id>611</id>
-        <kind>6</kind>
-        <userelative>-1</userelative>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
         <isquestion>0</isquestion>
         <useapplyto>-1</useapplyto>
         <exetype>2</exetype>
         <functionname></functionname>
         <codestring></codestring>
         <whoName>self</whoName>
-        <relative>-1</relative>
+        <relative>0</relative>
         <isnot>0</isnot>
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>punch</string>
-          </argument>
-          <argument>
-            <kind>0</kind>
-            <string>-2*punch</string>
+            <string>///RESEND SIGNAL
+
+punch += -2*punch;
+
+</string>
           </argument>
         </arguments>
       </action>
@@ -148,8 +153,7 @@ alarm[4] = 5;
             <string>///RETRY SERVER
 
 switch get_id
-{
-    case get_ip:    get_ip = http_get(request);
+{   case get_ip:    get_ip = http_get(request);
                     break;
     case get_cs:    get_cs = http_get(request);
                     break;
@@ -181,8 +185,13 @@ switch get_id
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>buffer_delete(buffer_pak);
+            <string>///START GAME
+
+if peer != -1
+    network_destroy(peer);
+buffer_delete(buffer_pak);
 room_goto_next();
+
 </string>
           </argument>
         </arguments>
@@ -211,13 +220,11 @@ room_goto_next();
 data = data&gt;&gt;(10*(!host*online));
 var p = 1 + (!host*online);
 repeat (2-online)
-{
-    //Cursor movement
+{   //Cursor movement
     cursor_select[p].hspeed = 0;
     cursor_select[p].vspeed = 0;
     switch (data&gt;&gt;1) &amp; 15
-    {
-        case 1: cursor_select[p].hspeed = -6;
+    {   case 1: cursor_select[p].hspeed = -6;
                 cursor_select[p].vspeed = 6;
                 break;
         case 2: cursor_select[p].vspeed = 6;
@@ -243,29 +250,30 @@ repeat (2-online)
     
     //Quick start debug using strong
     if (data&gt;&gt;5)&amp;7==3 and !online
-    {
-        select_char[1] = 1;
+    {   select_char[1] = 1;
         select_char[2] = 2;
         data |= 1;
     }
     
     //Confirm selection
+    if (punch == -1) and select_char0
+        data |= 1;
     if data&amp;1 and ((select_char[1] and select_char[2]) or (select_char[p] and online))
-    {
-        if punch == -1
-        {
-            punch = -(select_char[p] + 1);
+    {   if punch == -1
+        {   punch = -(select_char0 + 1);
+            select_char0 = -1;
             show_debug_message("CHARACTER " + string(select_char[p]));
         }
+        else if select_char0 == 0
+            select_char0 = select_char[p];
         else if !online
-        {
-            score = 0;//Tells puppeteer this is local {redundancy}
+        {   score = 0;//Tells puppeteer this is local {redundancy}
             if file_exists("record_l.txt")
                 file_delete("record_l.txt");
-            if file_exists("record_h.txt")
-                file_delete("record_h.txt");
-            if file_exists("record_c.txt")
-                file_delete("record_c.txt");
+            //if file_exists("record_h.txt")
+              //  file_delete("record_h.txt");
+            //if file_exists("record_c.txt")
+              //  file_delete("record_c.txt");
             
             file = file_text_open_write(working_directory + "record_l.txt");
             file_text_write_real(file,select_char[1]);
@@ -278,6 +286,7 @@ repeat (2-online)
             
             select_char[1] = -1;
             select_char[2] = -1;
+            peer = -1;
             show_debug_message("LOADING STAGE");
             alarm[0] = room_speed;//GAME IS READY
         }
@@ -285,27 +294,23 @@ repeat (2-online)
     
     //Keep alive send signal
     if online and (punch&lt;0)
-    {
-        buffer_seek(buffer_pak,buffer_seek_start,0);
+    {   buffer_seek(buffer_pak,buffer_seek_start,0);
         buffer_write(buffer_pak,buffer_u32,-(punch+1));
         network_send_udp(peer,ipp[0],ipp[1],buffer_pak,buffer_tell(buffer_pak));
         nettest = buffer_read(buffer_pak,buffer_u32);
         
         if nettest and -(punch+1)
-        {
-            score = host + 1;//Tells puppeteer this is online
+        {   score = host + 1;//Tells puppeteer this is online
             if file_exists("record_l.txt")
                 file_delete("record_l.txt");
             if host
-            {
-                if file_exists("record_h.txt")
+            {   if file_exists("record_h.txt")
                     file_delete("record_h.txt");
                 file = file_text_open_write(working_directory + "record_h.txt");
                 select_char[2] = nettest;
             }
             else
-            {
-                if file_exists("record_c.txt")
+            {   if file_exists("record_c.txt")
                     file_delete("record_c.txt");
                 file = file_text_open_write(working_directory + "record_c.txt");
                 select_char[1] = nettest;
@@ -333,16 +338,13 @@ repeat (2-online)
             
             punch = 0;
             select_char[p] = -1;
-            network_destroy(peer);
             show_debug_message("LOADING STAGE");
-            buffer_seek(buffer_pak,buffer_seek_start,0);
             network_send_udp(peer,ipp[0],ipp[1],buffer_pak,buffer_tell(buffer_pak));
-            alarm[4] = 5;//Overflow signal
+            alarm[3] = 5;//Overflow signal
             alarm[0] = room_speed;//GAME IS READY
         }
         else
-        {
-            punch *= -1;
+        {   punch *= -1;
             alarm[2] = room_speed * 2;
         }
     }
@@ -377,8 +379,7 @@ repeat (2-online)
     //Player selection
     data = data&gt;&gt;7;
     if data&amp;1 switch cur
-    {
-        //Characters
+    {   //Characters
         case 101:   select_char[p] = 1; break;
         case 102:   select_char[p] = 2; break;
         case 103:   select_char[p] = 3; break;
@@ -427,13 +428,12 @@ repeat (2-online)
                     get_hs = -1;
                     peer = -1;
                     
-                    for(port=6510;peer&lt;0;port++)
-                        peer = network_create_server(network_socket_udp,port,2);
+                    for (port=6510;peer&lt;0;port++)
+                        peer = network_create_server(network_socket_udp,port,1);
                     port--;
                     show_debug_message("UDP " + string(port));
-                    request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                            + "&amp;query=timeout_set_variable&amp;variable="+username+"&amp;value=user_ip"
-                            + "&amp;timeout=20&amp;data=0";
+                    request = site+"&amp;query=timeout_set_variable&amp;variable="+username
+                            + "&amp;value=user_ip&amp;timeout=20&amp;data=0";
                     get_ip = http_get(request);
                     break;
                     
@@ -442,20 +442,17 @@ repeat (2-online)
                     lobby = real(string_digits(bub.ble));
                     userother = string_letters(bub.ble);
                     with bubble_host instance_destroy();
-                    request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                            + "&amp;query=timeout_all_variable&amp;variable=main_lobby";
+                    request = site+"&amp;query=timeout_all_variable&amp;variable=main_lobby";
                     show_host = 0;
                     get_lk *= -1;
                     
                     if !lobby//Create a host
-                    {
-                        host = 1;
+                    {   host = 1;
                         get_lh = http_get(request);
                         get_lk++;
                     }
                     else//Join as a client
-                    {
-                        for(var i=ds_list_size(hip)-1;real(string_digits(ds_list_find_value(hip[|i],0)))!=lobby;i--){};
+                    {   for(var i=ds_list_size(hip)-1;real(string_digits(ds_list_find_value(hip[|i],0)))!=lobby;i--){};
                         check = ds_list_find_value(hip[|i],1);
                         check2 = string_copy(check,3,string_pos(',',check)-3);
                         get_cs = http_get(request);
@@ -470,12 +467,10 @@ repeat (2-online)
     }
     
     if !online
-    {
+    {   data = data&gt;&gt;2;
         //Go to replay
-        data = data&gt;&gt;2;
-        if (data&amp;1)
+        if data&amp;1
             room_goto(replay_room);
-        
         //Shift to next player
         data = data&gt;&gt;1;
         p++;
@@ -513,11 +508,7 @@ else
             <string>///CONNECTION
 
 if ds_map_find_value(async_load,"type") == network_type_data
-{
-    //ipp[0] = ds_map_find_value(async_load,"ip");
-    //ipp[1] = ds_map_find_value(async_load,"port");
-    //socket = ds_map_find_value(async_load,"id");
-    var buff = ds_map_find_value(async_load,"buffer");
+{   var buff = ds_map_find_value(async_load,"buffer");
     buffer_copy(buff,0,4,buffer_pak,4);
 }
 
@@ -545,34 +536,32 @@ if ds_map_find_value(async_load,"type") == network_type_data
             <kind>1</kind>
             <string>///RENDEZVOUS
 
-get_id = ds_map_find_value(async_load,"id");
+/*Based on ShadeSpeed CLOUD INDIE
+http://gmc.yoyogames.com/index.php?showtopic=623357
+PHP file moved to my site
+*/get_id = ds_map_find_value(async_load,"id");
 switch get_id
-{
-    //Capture current public ip and port
+{   //Capture current public ip and port
     case get_ip:    if get_lk == 0
-                    {
-                        status = ds_map_find_value(async_load,"http_status");
+                    {   status = ds_map_find_value(async_load,"http_status");
+                        show_debug_message("STATUS: " + string(status));
+                        
                         if ds_map_find_value(async_load,"status") == 0
-                        {
-                            ipp[0] = ds_map_find_value(async_load,"result");
+                        {   ipp[0] = ds_map_find_value(async_load,"result");
                             //Confirm ip on server, go collect it
                             if real(string_digits(ipp[0])) == 1
-                            {
-                                request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                        + "&amp;query=timeout_all_variable&amp;variable="+username;
+                            {   request = site+"&amp;query=timeout_all_variable&amp;variable="+username;
                                 get_ip = http_get(request);
                             }
                             //Failure on ip confirm or collect, retry
                             else if real(string_digits(ipp[0])) == 0
-                            {
-                                retry_cnt--;
+                            {   retry_cnt--;
                                 alarm[1] = room_speed * 2;
                                 show_debug_message('I'+string(retry_cnt));
                             }
                             //Collected ip, store it for self and delete on server
                             else
-                            {
-                                retry_cnt = 5;
+                            {   retry_cnt = 5;
                                 tip = ds_list_create();
                                 tip = ds_map_find_value(json_decode(ipp[0]),"default");
                                 ip = ds_list_find_value(tip[|0],0);
@@ -580,8 +569,7 @@ switch get_id
                                 ipp[1] = port;
                                 ds_list_destroy(tip);
                                 
-                                request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                        + "&amp;query=timeout_delete_variable&amp;variable="+username+"&amp;value=user_ip";
+                                request = site+"&amp;query=timeout_delete_variable&amp;variable="+username+"&amp;value=user_ip";
                                 get_cs = http_get(request);
                                 show_debug_message("IP OBTAINED (1/2)");
                                 get_lk++;//LOCKED
@@ -589,8 +577,7 @@ switch get_id
                         }
                         
                         else//Error, retry
-                        {
-                            retry_cnt--;
+                        {   retry_cnt--;
                             alarm[1] = room_speed * 2;
                             show_debug_message('O'+string(retry_cnt));
                         }
@@ -599,16 +586,14 @@ switch get_id
                     
     //Client selection on server to trade ip address with host
     case get_cs:    if get_lk == 1
-                    {
-                        status = ds_map_find_value(async_load,"http_status");
+                    {   status = ds_map_find_value(async_load,"http_status");
+                        show_debug_message("STATUS: " + string(status));
+                        
                         if ds_map_find_value(async_load,"status") == 0
-                        {
-                            ipp[2] = ds_map_find_value(async_load,"result");
+                        {   ipp[2] = ds_map_find_value(async_load,"result");
                             //Confirm either deletion on server (collect lobbies) or ip trade (last check)
                             if real(string_digits(ipp[2])) == 1
-                            {
-                                request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                        + "&amp;query=timeout_all_variable&amp;variable=main_lobby";
+                            {   request = site+"&amp;query=timeout_all_variable&amp;variable=main_lobby";
                                 get_cs = http_get(request);
                                 if !punch
                                     show_debug_message("IP OBTAINED (2/2)");
@@ -618,32 +603,25 @@ switch get_id
                             //Failure on deletion, lobby collect, or trade confirm, retry
                             else if real(string_digits(ipp[2])) == 0
                             and string(ipp[2]) != "[]"
-                            {
-                                retry_cnt--;
+                            {   retry_cnt--;
                                 alarm[1] = room_speed * 2;
                                 show_debug_message('I'+string(retry_cnt));
                             }
                             //Collected lobby, send to display, choose host, or finalize punch
                             else
-                            {
-                                retry_cnt = 5;
+                            {   retry_cnt = 5;
                                 tip = ds_list_create();
                                 tip = ds_map_find_value(json_decode(ipp[2]),"default");
                                 
                                 if punch
-                                {
-                                    for(var i=ds_list_size(tip)-1;real(string_digits(ds_list_find_value(tip[|i],0)))!=lobby;i--)
+                                {   for (var i=ds_list_size(tip)-1;real(string_digits(ds_list_find_value(tip[|i],0)))!=lobby;i--)
                                         if i&lt;0 break;//Check if host is in lobby
                                     if i&gt;=0
-                                    {
-                                        check = ds_list_find_value(tip[|i],1);
+                                    {   check = ds_list_find_value(tip[|i],1);
                                         if punch == 1//Check for no trade (same acquired ip)
-                                        {
-                                            if check2 == string_copy(check,3,string_pos(',',check)-3)
-                                            {
-                                                ipp[2] = 1;
-                                                request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                                        + "&amp;query=timeout_set_variable&amp;variable=main_lobby"
+                                        {   if check2 == string_copy(check,3,string_pos(',',check)-3)
+                                            {   ipp[2] = 1;
+                                                request = site+"&amp;query=timeout_set_variable&amp;variable=main_lobby"
                                                         + "&amp;value="+userother+string(lobby)+"&amp;timeout=20&amp;data="+string(ipp);
                                                 get_cs = http_get(request);
                                                 
@@ -653,35 +631,30 @@ switch get_id
                                                 punch++;
                                             }
                                             else
-                                            {
-                                                show_debug_message("SOMEONE ELSE HAS ALREADY JOINED");
+                                            {   show_debug_message("SOMEONE ELSE HAS ALREADY JOINED");
                                                 retry_cnt = -1;
                                             }
                                         }
                                         else if punch == 2//Check for trade (same owned ip)
                                         {
                                             if ip == string_copy(check,3,string_pos(',',check)-3)
-                                            {
-                                                punch = -1;
+                                            {   punch = -1;
                                                 online = 1;
                                                 get_lk = 99;//LOCKED AND DONE
                                                 show_debug_message("IP TRADED (2/2)");
                                             }
                                             else
-                                            {
-                                                show_debug_message("SOMEONE ELSE HAS JOINED");
+                                            {   show_debug_message("SOMEONE ELSE HAS JOINED");
                                                 retry_cnt = -1;
                                             }
                                         }
                                         else//Punch error
-                                        {
-                                            show_debug_message("PUNCH ERROR - JOINING");
+                                        {   show_debug_message("PUNCH ERROR - JOINING");
                                             retry_cnt = -1;
                                         }
                                     }
                                     else//Host gone
-                                    {
-                                        if punch == 1
+                                    {   if punch == 1
                                             show_debug_message("HOST IS ALREADY GONE");
                                         else if punch == 2
                                             show_debug_message("HOST IS GONE");
@@ -693,12 +666,10 @@ switch get_id
                                 }
                                 ////
                                 else//Send to display
-                                {
-                                    hip = ds_list_create();
+                                {   hip = ds_list_create();
                                     //var h = ds_list_create();
                                     for(var i=0;i&lt;ds_list_size(tip);i++)
-                                    {
-                                        check = ds_list_find_value(tip[|i],1);
+                                    {   check = ds_list_find_value(tip[|i],1);
                                         if !real(string_char_at(check,string_length(check)-2))
                                             ds_list_add(hip,tip[|i]);
                                     }
@@ -713,8 +684,7 @@ switch get_id
                         }
                         
                         else//Error, retry
-                        {
-                            retry_cnt--;
+                        {   retry_cnt--;
                             alarm[1] = room_speed * 2;
                             show_debug_message('O'+string(retry_cnt));
                         }
@@ -723,23 +693,21 @@ switch get_id
                     
     //Check numbers of lobby and add host
     case get_lh:    if get_lk == 2
-                    {
-                        status = ds_map_find_value(async_load,"http_status");
+                    {   status = ds_map_find_value(async_load,"http_status");
+                        show_debug_message("STATUS: " + string(status));
+                        
                         if ds_map_find_value(async_load,"status") == 0
-                        {
-                            lobby = ds_map_find_value(async_load,"result");
+                        {   lobby = ds_map_find_value(async_load,"result");
                             //Failure on lobby collect, retry
                             if real(string_digits(lobby)) == 0
                             and string(lobby) != "[]"
-                            {
-                                retry_cnt--;
+                            {   retry_cnt--;
                                 alarm[1] = room_speed * 2;
                                 show_debug_message('I'+string(retry_cnt));
                             }
                             //Collected lobby, find top lobby and create host on top
                             else
-                            {
-                                retry_cnt = 5;
+                            {   retry_cnt = 5;
                                 tip = ds_list_create();
                                 tip = ds_map_find_value(json_decode(lobby),"default");
                                 if ds_list_size(tip)
@@ -749,8 +717,7 @@ switch get_id
                                 ipp[2] = 0;
                                 ds_list_destroy(tip);
                                 
-                                request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                        + "&amp;query=timeout_set_variable&amp;variable=main_lobby"
+                                request = site+"&amp;query=timeout_set_variable&amp;variable=main_lobby"
                                         + "&amp;value="+username+string(lobby)+"&amp;timeout=120&amp;data="+string(ipp);
                                 get_hs = http_get(request);
                                 show_debug_message("HOST ONLINE (1/2)");
@@ -759,8 +726,7 @@ switch get_id
                         }
                         
                         else//Error, retry
-                        {
-                            retry_cnt--;
+                        {   retry_cnt--;
                             alarm[1] = room_speed * 2;
                             show_debug_message('O'+string(retry_cnt));
                         }
@@ -769,25 +735,21 @@ switch get_id
                     
     //Keep checking host on server until client is captured
     case get_hs:    if get_lk == 3
-                    {
-                        status = ds_map_find_value(async_load,"http_status");
+                    {   status = ds_map_find_value(async_load,"http_status");
+                        show_debug_message("STATUS: " + string(status));
+                        
                         if ds_map_find_value(async_load,"status") == 0
-                        {
-                            client = ds_map_find_value(async_load,"result");
+                        {   client = ds_map_find_value(async_load,"result");
                             //Confirm either host on server or client capture
                             if real(string_digits(client)) == 1
-                            {
-                                if !punch//Hosting, go collect lobby
-                                {
-                                    request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                            + "&amp;query=timeout_all_variable&amp;variable=main_lobby";
+                            {   if !punch//Hosting, go collect lobby
+                                {   request = site+"&amp;query=timeout_all_variable&amp;variable=main_lobby";
                                     get_hs = http_get(request);
                                     punch++;
                                     show_debug_message("HOST ONLINE (2/2)");
                                 }
                                 else//Capturing, start hole punching
-                                {
-                                    punch = -1;
+                                {   punch = -1;
                                     online = 1;
                                     get_lk = 99;//LOCKED AND DONE
                                     show_debug_message("CLIENT CAPTURED");
@@ -795,18 +757,15 @@ switch get_id
                             }
                             //Failure on hosting or lobby collect/delete, retry
                             else if real(string_digits(client)) == 0
-                            {
-                                if !punch
-                                {
-                                    retry_cnt--;
+                            {   if !punch
+                                {   retry_cnt--;
                                     show_debug_message('I'+string(retry_cnt));
                                 }
                                 alarm[1] = room_speed * 2;
                             }
                             //Collected lobby, find owned and see if there is a trade
                             else
-                            {
-                                tip = ds_list_create();
+                            {   tip = ds_list_create();
                                 tip = ds_map_find_value(json_decode(client),"default");
                                 for(var i=ds_list_size(tip)-1;real(string_digits(ds_list_find_value(tip[|i],0)))!=lobby;i--){};
                                 client = ds_list_find_value(tip[|i],1);
@@ -814,12 +773,10 @@ switch get_id
                                 ds_list_destroy(tip);
                                 
                                 if ipp[2]//If traded, capture client ip and port and delete host
-                                {
-                                    ipp[0] = string_copy(client,3,string_pos(',',client)-3);
+                                {   ipp[0] = string_copy(client,3,string_pos(',',client)-3);
                                     ipp[1] = real(string_copy(client,string_pos(',',client)+1,
                                                   string_length(client)-string_pos(',',client)-4));
-                                    request = "http://www.shadespeed.com/storage.php?game="+string(game_id)
-                                            + "&amp;query=timeout_delete_variable&amp;variable=main_lobby"
+                                    request = site+"&amp;query=timeout_delete_variable&amp;variable=main_lobby"
                                             + "&amp;value="+username+string(lobby);
                                     get_hs = http_get(request);
                                 }
@@ -831,8 +788,7 @@ switch get_id
                         else//Error, retry
                         {
                             if !punch
-                            {
-                                retry_cnt--;
+                            {   retry_cnt--;
                                 show_debug_message('O'+string(retry_cnt));
                             }
                             alarm[1] = room_speed * 2;
@@ -843,8 +799,7 @@ switch get_id
 
 //Connection success, go online
 if (get_lk==99) and online
-{
-    with green_stg instance_destroy();
+{   with green_stg instance_destroy();
     instance_create(384,64,card_cyan_one);
     instance_create(480,64,card_white_one);
     instance_create(320,160,card_red_one);
@@ -862,8 +817,7 @@ if (get_lk==99) and online
 
 //Connection failure, return to offline
 else if (get_lk&gt;=0) and (retry_cnt&lt;0)
-{
-    if instance_exists(bubble_host) with bubble_host instance_destroy();
+{   if instance_exists(bubble_host) with bubble_host instance_destroy();
     with green_stg instance_destroy();
     instance_create(384,64,card_cyan_one);
     instance_create(480,64,card_white_one);
@@ -875,8 +829,7 @@ else if (get_lk&gt;=0) and (retry_cnt&lt;0)
     instance_create(480,352,yellow_stg);
     
     if show_host
-    {
-        ds_list_destroy(hip);
+    {   ds_list_destroy(hip);
         ds_list_destroy(tip);
         show_host = 0;
     }
@@ -927,10 +880,8 @@ else if (get_lk&gt;=0) and (retry_cnt&lt;0)
 draw_set_font(HUD_test);
 var p = 0;
 repeat 2
-{
-    switch (cur&amp;1023)
-    {
-        case 101:   draw_text_transformed_color(0.98*p*room_width,room_height/2,"Power",
+{   switch (cur&amp;1023)
+    {   case 101:   draw_text_transformed_color(0.98*p*room_width,room_height/2,"Power",
                                                 room_width/view_wview[0],room_height/view_hview[0],
                                                 0,c_red,c_red,c_red,c_red,1);
                     break;
@@ -966,11 +917,9 @@ repeat 2
 draw_set_halign(fa_left);
 
 if show_host
-{
-    //Hosting bubble
+{   //Hosting bubble
     if show_host == 2
-    {
-        instance_create(320,352,green_stg);
+    {   instance_create(320,352,green_stg);
         var bub = instance_create(0,0,bubble_host);
         bub.ble = 0;
     }
@@ -980,10 +929,8 @@ if show_host
     
     //Lobby bubble
     for(var i=0;i!=ds_list_size(hip);i++)
-    {
-        if show_host == 2
-        {
-            bub = instance_create(0,48+48*i,bubble_host);
+    {   if show_host == 2
+        {   bub = instance_create(0,48+48*i,bubble_host);
             bub.ble = ds_list_find_value(hip[|i],0);
         }
         draw_text_transformed_color(0,48+48*i,string_letters(ds_list_find_value(hip[|i],0)),

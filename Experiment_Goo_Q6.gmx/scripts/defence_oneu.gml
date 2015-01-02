@@ -1,5 +1,5 @@
 
-switch(argument0)
+/*switch(argument0)
 {
     case 1:     switch(argument1)
                 {
@@ -18,4 +18,4 @@ switch(argument0)
     case 2:     sprite_assign(block_tmp,block_blue);
                 actor_one.char_select = 2;
                 return 5;
-}
+}*/

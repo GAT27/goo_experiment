@@ -28,8 +28,7 @@
             <string>///STARTUP
 
 if !file_exists("controller.ini")
-{
-    ini_open("controller.ini");
+{   ini_open("controller.ini");
     ini_write_real("control_p1","pause",gp_start);
     ini_write_real("control_p1","up",gp_padu);
     ini_write_real("control_p1","down",gp_padd);
@@ -56,8 +55,10 @@ if !file_exists("controller.ini")
     ini_close();
 }
 
+scr_create_animation_vertex_format();
+global.shader_interpol = shader_get_uniform(sh_blend, "u_interpol");
 display_reset(2,false);
-get_string_async("Create a username (letters only)","Anon");
+get_string_async("Create a username (letters only)","GoodPlayer");
 
 </string>
           </argument>
@@ -88,9 +89,8 @@ if ds_map_find_value(async_load,"status")
     ini_write_string("user","name",
                      string_letters(ds_map_find_value(async_load,"result")));
 else
-{
-    ini_write_string("user","name","random");
-    audio_play_sound(sound0,1,false);
+{   ini_write_string("user","name","RandomBum");
+    //audio_play_sound(sound0,1,false);
 }
 ini_close();
 room_goto_next();
