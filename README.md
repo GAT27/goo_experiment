@@ -16,6 +16,10 @@ Q - shield, E - Charge, R - start/pause match.
 
 Pressing "start" for 6 frames will pause the game, then either press "jump" to end match or "start" to unpause.
 
+#Debugging:
+
+Pressing Select will show general hurtboxes (blue), character hurtboxes (red), attack hitboxes (green), and additional stats.
+
 #Quick select:
 
 Press and release "strong" to start a match with red as 1 and blue as 2.
@@ -39,9 +43,9 @@ client-client hairpin loop (some routers may not support this).
 
 1. **FIXED** Holding any buttons (besides movement, start/select, camera) during match load. {Initialization issue, crash}
 
-2. Sbecial attacking with certain directional inputs. {Moves not yet programmed, crash}
+2. **ADJUSTED** Sbecial attacking with certain directional inputs. {Moves not yet programmed, crash}
 
-3. **FIXED** Attacking just at the end of recovery then attacking twice (semi-hard). {Out of bound access, crash}
+3. **FIXED** Attacking just at the end of recovery then attacking twice. (semi-hard). {Out of bound access, crash}
 
 4. **FIXED** Certain air attacks will cause you to fly or land fast. {Moves not yet programmed, end match}
 
@@ -51,6 +55,8 @@ client-client hairpin loop (some routers may not support this).
 
 7. **FIXED** Players reaching max distant apart, jump backwards, then move towards causes fall through (semi-hard).
 {Collision issue, end match}
+
+8. **NEW** Grabbing each other at the exact same time freezes players. {Case scenario not programmed, end match}
 
 #Progress:
 
