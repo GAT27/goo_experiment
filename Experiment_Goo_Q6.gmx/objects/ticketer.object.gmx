@@ -55,6 +55,23 @@ if !file_exists("controller.ini")
     ini_close();
 }
 
+enum E
+{   hml = 38,
+    hmh = 39,
+    //hll = 40,
+    //hlh = 41,
+    //hhl = 42,
+    //hhh = 43,
+    hfu = 44,
+    hfd = 45,
+    //hfl = 46,
+    htg = 47,
+    hta = 48,
+    hts = 49,
+    htc = 50,
+    huq = 62
+}
+
 scr_create_animation_vertex_format();
 global.shader_interpol = shader_get_uniform(sh_blend, "u_interpol");
 display_reset(2,false);

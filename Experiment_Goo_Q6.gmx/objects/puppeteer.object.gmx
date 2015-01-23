@@ -28,7 +28,7 @@
             <string>///RECORD
 
 data = 10;
-//g_ready = 0;
+playb = 1;
 g_sync = 0;
 g_past = 0;
 tick = 0;
@@ -53,7 +53,7 @@ if !score//Local setup
         file = file_text_open_read(working_directory + line);
         repeat 6 file_text_readln(file);
     }
-    
+    stager.g_ready = 1;
 }
 else//Online setup
 {   online = 1;
@@ -94,6 +94,7 @@ file_text_readln(file);
 if room == asset_get_index("battle_room")
 {   file_text_close(file);
     file = file_text_open_append(working_directory + line);
+    playb--;
 }
 
 stager.data1 = data1;
@@ -127,13 +128,13 @@ stager.data3 = data3&gt;&gt;2;
 if online
 {   if tick == -1
     {   stager.g_ready = 0;
-        stager.alarm[0] = stager.alarm[0] + 1;
+        //stager.alarm[0] = stager.alarm[0] + 1;
     }
     else// if g_ready
         stager.g_ready = 1;
 }
-else
-    stager.g_ready = 1;
+//else
+  //  stager.g_ready = 1;
 
 </string>
           </argument>
@@ -189,7 +190,7 @@ if playb
 //data = 999 + (data1+536870912);
 
 //Recording
-if room==asset_get_index("battle_room")
+if room == asset_get_index("battle_room")
 {   if online//Online
     {   g_sync = 60 * stager.clock_s + stager.alarm[0];
         if ds_queue_size(data_t) &lt; 2
@@ -238,7 +239,7 @@ if room==asset_get_index("battle_room")
         }
     }
     ////
-    else//Local
+    else if !stager.m_pause//Local
     {   file_text_write_real(file,((data&amp;1046528)&gt;&gt;2) + ((data&amp;1022)&gt;&gt;1));
         file_text_writeln(file);
     }

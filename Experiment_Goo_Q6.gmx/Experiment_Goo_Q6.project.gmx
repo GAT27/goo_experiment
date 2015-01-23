@@ -29,8 +29,8 @@
   <sprites name="sprites">
     <sprite>sprites\block_tmp</sprite>
     <sprite>sprites\block_blue</sprite>
-    <sprite>sprites\block_red</sprite>
     <sprite>sprites\ground</sprite>
+    <sprite>sprites\general_hurtbox</sprite>
     <sprite>sprites\power_one_hurtbox</sprite>
     <sprite>sprites\ticketer_set</sprite>
     <sprite>sprites\actor_set</sprite>
@@ -83,6 +83,7 @@
   </fonts>
   <objects name="objects">
     <object>objects\hitbox</object>
+    <object>objects\hurtbox</object>
     <object>objects\groundf</object>
     <object>objects\ticketer</object>
     <object>objects\director</object>
@@ -106,7 +107,6 @@
     <object>objects\obj_model</object>
     <object>objects\obj_camera</object>
     <object>objects\obj3</object>
-    <object>objects\power_one_m145</object>
   </objects>
   <rooms name="rooms">
     <room>rooms\startup_room</room>

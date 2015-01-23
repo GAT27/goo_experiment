@@ -1,9 +1,15 @@
 #define BASIC_SET
 
-BS_prepare();
-BS_movement();
-BS_attacking();
-BS_defending();
+if is_real(argument0) and !argument0
+{   BS_prepare();
+    BS_movement();
+    BS_attacking();
+    BS_reacting();
+}
+else
+{   BS_cleanup(argument0);
+    exit;
+}
 
 /*Frame advancement, attribute containers created in BS_attacking
 00: hbox:       created hitbox id
@@ -14,8 +20,8 @@ BS_defending();
 05: hty:        hitbox y position
 06: hzx:        hitbox x length (width)
 07: hzy:        hitbox y length (height)
-08: s_part:     secondary attack action triggers
-09: t_part:     secondary attack action counter
+08: s_part:     secondary attacks action stage
+09: t_part:     secondary attacks action timer
 10: h_firm:     hit confirm
 */if ds_list_size(abox)
 for (var i=ds_list_size(abox)-1;i>=0;i--)
@@ -84,17 +90,32 @@ for (var i=ds_list_size(abox)-1;i>=0;i--)
     cbox[2] = frame;
     cbox[3] = buffer_af;
     cbox[4] = htx;
+    //Prepare for attack removal after a cancel
+    if cancel and (cancel&1) and !(action[move,3] and frame>1)
+    {   if instance_exists(hbox)
+            hbox.visible = 0;
+        else
+        {   cbox = 0;
+            ds_list_delete(abox,i);
+        }
+    } 
+    cancel = floor(cancel/2);
 }
 
 
 #define BS_prepare
 
-//Buffer meter
+//Buffer meter, full control reset
 if buffer_mtr < 60
 {   buffer_mtr++;
-    if buffer_mtr>=60
+    if buffer_mtr >= 60
     {   buffer_mtr = 60;
-        trig_bk = 0;
+        cancel = 0;
+        sty = -1;
+        if trig_br
+        {   trig_br = 0;
+            skin = tmp_skin;
+        }
     }
 }
 
@@ -128,20 +149,30 @@ or (state==51) or (state>=55 and state<=58))// or (state>=64)
     gvy = 0;
     //gvydam = 0;
     djmp = 1;
-    if x < oppose.x
-    {   forward = 6;
-        backward = 4;
+    if !(state==5)//Ignore when forward dashing
+    {   if x < oppose.x//Being on the left
+        {   forward = 6;
+            backward = 4;
+        }
+        else//Being on the right
+        {   forward = 4;
+            backward = 6;
+        }
     }
-    else
-    {   forward = 4;
-        backward = 6;
+    if place_meeting(x + hspeed,y,oppose) and oppose.grounded
+    {   if (oppose.walled==1) and (hspeed>0)//Right side
+            walled = 2;
+        else if (oppose.walled==3) and (hspeed<0)//Left side
+            walled = 4;
+        else
+            oppose.x += hspeed;
     }
-    if place_meeting(x + hspeed,y,oppose)
-        oppose.x += hspeed;
 }
 else
 {   grounded = 0;
     gvy += grav;
+    while place_meeting(x,y,groundf)
+        x += forward-5;
     if place_meeting(x,y + vspeed + grav,groundf)
     or place_meeting(x,y + vspeed + gvydam,groundf)
     {   y = floor(y);
@@ -151,22 +182,38 @@ else
         vspeed = 0;
         grounded = 1;
         lifted = 0;
-        if x < oppose.x
+        airborne = 0;
+        if x < oppose.x//Landing on the left
         {   while place_meeting(x,y,oppose)
-                x--;
+            {   if place_meeting(x - 1,y,groundf)
+                    oppose.x++;
+                else
+                    x--;
+            }
             forward = 6;
             backward = 4;
         }
-        else
+        else//Landing on the right
         {   while place_meeting(x,y,oppose)
-                x++;
+            {   if place_meeting(x + 1,y,groundf)
+                    oppose.x--;
+                else
+                    x++;
+            }
             forward = 4;
             backward = 6;
         }
     }
 }
 ////
-if place_meeting(x + abs(hspeed) + 1,y,groundf)
+with oppose if (x<oppose.x)//Special case to handle left side fallthrough
+while place_meeting(x,y,groundf)
+    x++;
+if x < oppose.x
+while place_meeting(x,y,groundf)
+    x++;
+////
+if place_meeting(x + abs(hspeed) + 1,y,groundf)//Wall to the right
 {   x = floor(x);
     while !place_meeting(x + 1,y,groundf)
         x++;
@@ -174,13 +221,29 @@ if place_meeting(x + abs(hspeed) + 1,y,groundf)
         x--;
     walled = 1;
 }
-else if place_meeting(x - abs(hspeed) - 1,y,groundf)
+else if walled == 2//Opponent to the right
+{   x = floor(x);
+    while !place_meeting(x + 1,y,oppose)
+        x++;
+    while place_meeting(x,y,oppose)
+        x--;
+    walled--;
+}
+else if place_meeting(x - abs(hspeed) - 1,y,groundf)//Wall to the left
 {   x = floor(x);
     while !place_meeting(x - 1,y,groundf)
         x--;
     while place_meeting(x,y,groundf)
         x++;
     walled = 3;
+}
+else if walled == 4//Opponent to the left
+{   x = floor(x);
+    while !place_meeting(x - 1,y,oppose)
+        x--;
+    while place_meeting(x,y,oppose)
+        x++;
+    walled--;
 }
 else
     walled = 0;
@@ -192,7 +255,10 @@ if grounded
 }
 else
 {   if heldj
-        jump = (data>>6)&1;
+    {   jump = (data>>6)&1;
+        if jump
+            airborne = 0;
+    }
     else
         jump = 0;
     heldj = !((data>>6)&1);
@@ -212,26 +278,21 @@ else
 
 //Passive controls
 shoulder = (data>>7)&3;
-if trig_bk
-    trig_bk--;
-if !shoulder//Nothing held
-{   walk_sp[4] = charge_for;
-    walk_sp[7] = charge_bck;
-    trig_ps = -1;
-}
-else if shoulder == 1//Shielding and breaking
+if shoulder == 1//Shielding and breaking
 {   walk_sp[4] = charge_for * 0.2;
     walk_sp[7] = charge_bck * 0.2;
-    if trig_ps<0
-        trig_ps = defense_cor;
+    if trig_ps < 0
+        trig_ps = 2 * defense_cor;
     else if trig_ps
         trig_ps--;
     
-    if ds_list_size(abox) and grounded and !trig_bk
-    {   cbox = abox[|ds_list_size(abox)-1];
-        if (cbox[2]==2 and (cbox[1]>=192 or !cbox[0].hit))
-        or (cbox[2]==3 and (cbox[1]>=192 or !cbox[4]))
-            trig_bk = 10;
+    if ds_list_size(abox) and grounded and !trig_br and (buffer_mtr<60)
+    {   var cbox = abox[|ds_list_size(abox)-1];
+        if (cbox[2]==2 and ((cbox[1]>=192 and cbox[1]<224) or (oppose.sty>=0 and !cbox[0].hit)))
+        or (cbox[2]==3 and ((cbox[1]>=192 and cbox[1]<224) or (oppose.sty>=0 and !cbox[4])))
+        {   trig_br = 1;
+            tmp_skin = skin;//SKIN CHANGE
+        }
     }
 }
 else if shoulder == 2//Charging
@@ -239,39 +300,43 @@ else if shoulder == 2//Charging
     walk_sp[7] = charge_bck * 1.2;
     charge += power_sec / 10;
 }
+else//Nothing held
+{   walk_sp[4] = charge_for;
+    walk_sp[7] = charge_bck;
+    trig_ps = -1;
+}
 
 //Meter limits
-if life <= 0
-    stager.clock_s = 0;
+if life < 1
+    stager.clock_s = 0;//END MATCH
 if will <= 0
 {   stock--;
     if !stock
-        stager.clock_s = 0;
+        stager.clock_s = 0;//END MATCH
     else
     {   shield = 400;
         will = 2000;
         oppose.will = 2000;
     }
 }
-////
-if !(shoulder==1)//Shield regen
-    shield += 0;//2;
-if tick
-{   life += 4 * stamina_pri;//Life capsule
-    boost += 10;//Gong race
-    //if !(shoulder==1)//Shield regen
-      //  shield += 2;
-    if !(shoulder==2) and (trig_ch<=0)//Desperate charging
-        charge -= power_sec;
-    else
-    {   trig_ch--;
-        if trig_ch < 0
-            trig_ch = 0;
-    }
-    if charge < 0
-        charge = 0;
-    tick = 0;
+if (gauge<0 and !goo) or (goo<0)
+{   gauge = 0;
+    goo = 0;
 }
+////
+life += 4*stamina_pri/room_speed;//Life regen
+boost += 3*speed_pri/(2+(oppose.boost==100))/room_speed;//Boost regen
+if !(shoulder==1)//Shield regen
+    shield += 0 / room_speed;//2;
+if !(shoulder==2) and (trig_ch<=0)//Passive charging
+    charge -= 2 / room_speed;
+else
+{   trig_ch--;
+    if trig_ch < 0
+        trig_ch = 0;
+}
+if charge < 0
+    charge = 0;
 ////
 if life > 10000
     life = 10000;
@@ -282,13 +347,13 @@ if shield > min(400,will)
 if charge > (20*stock)
 {   charge = 20 * stock;
     if trig_ch <= 0
-        trig_ch = 2;
+        trig_ch = 2 * room_speed;
 }
-if bar>=(300+40*goo) or (goo==7)
-{   if goo==7
-        bar = 0;
+if (gauge>=300+40*goo) or (goo==7)
+{   if goo == 7
+        gauge = 0;
     else
-    {   bar -= 300+40*goo;
+    {   gauge -= 300+40*goo;
         goo++;
     }
 }
@@ -299,18 +364,56 @@ move = state;
 #define BS_movement
 
 //Break controls
-if trig_bk and !(shoulder==1) and grounded
-{   if goo and (abs(arrow-5)==1)
-    {   if arrow == forward
-            state = 5;
-        else
-            state = 8;
-        dash = dasl[state];
+if trig_br and !(shoulder==1) and grounded and (goo or boost==100)
+{   skin = background_get_texture(back_tmp);
+    
+    //Focus break
+    if goo and (arrow>=6) or (arrow==4)
+    {   if (arrow>=4 and arrow<=6)//Dashing
+        {   if arrow == forward
+                state = 5;
+            else
+                state = 8;
+            dash = dasl[state];
+            dask = 1;
+        }
+        else///Jumping
+        {   if arrow == forward+3
+                state = 17;
+            else if arrow == backward+3
+                state = 20;
+            else
+                state = 23;
+            heldlr = !(arrow==8);
+            grounded = 0;
+            vspeed = -grav;
+        }
         buffer_mtr = 60;
-        bar = floor(bar * bar / (300+40*goo));
+        gauge = floor(gauge*gauge / (300+40*goo));
         goo--;
-        trig_bk = 0;
-        dask = 1;
+        trig_br = 0;
+        if !cancel
+            cancel = 1 + ((attack==1 and goo) or (attack>1));
+        else
+            cancel += power(4,(attack==1 and goo) or (attack>1));
+        skin = tmp_skin;
+    }
+    
+    //Shift break
+    else if (boost==100) and (shoulder==2)
+    {   state = 0;
+        buffer_mtr = 60;
+        boost -= 100;
+        trig_br = 0;
+        if !cancel
+            cancel = 1;
+        else
+            cancel += 1;
+        /*if (attack==1 and goo) or (attack>1)
+            cancel = 2;
+        else
+            cancel = 1;*/
+        skin = tmp_skin;
     }
 }
 
@@ -336,7 +439,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 break;
                 
     //Prepare forward walk
-    case 3:     if dast<=0//Dash trigger
+    case 3:     if dast <= 0//Dash trigger
                     dast = dasc;
                 dast--;
                 if !(arrow==forward or arrow==forward+3)//Let go forward
@@ -575,9 +678,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto crouching
-                {   move = 9;
-                    //vspeed = 0;
-                }
+                    move = 9;
                 else if djmp and jump//Do a second jump
                 {   if (arrow==forward+3) or (arrow==forward-3)//Repeat here
                     or (arrow==forward)
@@ -593,7 +694,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 else if !heldlr and (arrow==forward or arrow==forward+3)//Goto prepare forward air
                 {   move = 18;
-                    //dast = 0;
                     ptate = state;
                 }
                 else if (arrow==backward) or (arrow==backward+3)//Goto prepare back air
@@ -601,8 +701,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                     ptate = state;
                     heldlr = 0;
                 }
-                else if !heldlr and (arrow==forward-3 or arrow==backward-3//Goto prepare down air
-                or arrow==2)
+                else if !heldlr and (arrow>=1 and arrow<=3)//Goto prepare down air
                 {   move = 26;
                     ptate = state;
                 }
@@ -633,7 +732,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                         move = 0;
                     else//Goto crouching
                         move = 9;
-                    //vspeed = 0;
                     dast = 0;
                     dash = 0;
                 }
@@ -657,8 +755,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                     djmp = 0;
                 }
                 else if dast <= 0
-                {
-                    if ptate == 23//Goto forward flip
+                {   if (ptate==23) and !airborne//Goto forward flip
                     {   move = 24;
                         heldlr = 1;
                         gvy = gvy/2;
@@ -691,6 +788,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 {   move = 17;
                     gvy = walk_sp[23];
                     dash = 0;
+                    airborne = 0;
                 }
                 else//Stay here
                     move = state;
@@ -703,9 +801,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto crouching
-                {   move = 9;
-                    //vspeed = 0;
-                }
+                    move = 9;
                 else if djmp and jump//Do a second jump
                 {   if (arrow==forward+3) or (arrow==forward-3)//Goto forward jump
                     or (arrow==forward)
@@ -724,13 +820,11 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                     ptate = state;
                     heldlr = 0;
                 }
-                else if !heldlr and (arrow==backward) or (arrow==backward+3)//Goto prepare back air
+                else if !heldlr and (arrow==backward or arrow==backward+3)//Goto prepare back air
                 {   move = 21;
-                    //dast = 0;
                     ptate = state;
                 }
-                else if !heldlr and (arrow==forward-3 or arrow==backward-3//Goto prepare down air
-                or arrow==2)
+                else if !heldlr and (arrow>=1 and arrow<=3)//Goto prepare down air
                 {   move = 26;
                     ptate = state;
                 }
@@ -744,7 +838,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 
     //Prepare back air
     case 21:    if !grounded
-                {   if dast<=0//Dash trigger
+                {   if dast <= 0//Dash trigger
                         dast = dasc;
                     dast--;
                     if !(arrow==backward or arrow==backward+3)//Let go backward
@@ -761,7 +855,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                         move = 0;
                     else//Goto crouching
                         move = 9;
-                    //vspeed = 0;
                     dast = 0;
                     dash = 0;
                 }
@@ -785,7 +878,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                     djmp = 0;
                 }
                 else if dast <= 0
-                {   if ptate == 23//Goto back flip
+                {   if (ptate==23) and !airborne//Goto back flip
                     {   move = 25;
                         heldlr = 1;
                         gvy = gvy/2;
@@ -814,10 +907,11 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 vspeed = 0;
                 dash--;//Dash until end duration
                 ////
-                if dash <= 0//Goto forward jump
+                if dash <= 0//Goto back jump
                 {   move = 20;
                     gvy = walk_sp[23];
                     dash = 0;
+                    airborne = 0;
                 }
                 else//Stay here
                     move = state;
@@ -834,10 +928,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto crouching
-                {   move = 9;
-                    //hspeed = 0;
-                    //vspeed = 0;
-                }
+                    move = 9;
                 else if djmp and jump//Do a second jump
                 {   if (arrow==forward+3) or (arrow==forward-3)//Goto forward jump
                     or (arrow==forward)
@@ -858,18 +949,15 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 {   move = 21;
                     ptate = state;
                 }
-                else if (arrow==forward-3) or (arrow==backward-3)//Goto prepare down air
-                or (arrow==2)
+                else if !heldlr and (arrow>=1 and arrow<=3)//Goto prepare down air
                 {   move = 26;
                     ptate = state;
                 }
                 else//Stay here
                     move = state;
                 ////
-                if move != state
-                {   airborne = 0;
-                    gvy = vspeed + walk_sp[23];
-                }
+                if !(arrow>=1 and arrow<=3)//Double tapping in air
+                    heldlr = 0;
                 break;
                 
     //Forward flip
@@ -879,9 +967,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto crouching
-                {   move = 9;
-                    //vspeed = 0;
-                }
+                    move = 9;
                 else if djmp and jump//Do a second jump
                 {   if (arrow==forward+3) or (arrow==forward-3)//Goto forward jump
                     or (arrow==forward)
@@ -896,7 +982,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 else if !heldlr and (arrow==forward or arrow==forward+3)//Goto prepare forward air
                 {   move = 18;
-                    //dast = 0;
                     ptate = state;
                 }
                 else if (arrow==backward) or (arrow==backward+3)//Goto prepare back air
@@ -924,9 +1009,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto crouching
-                {   move = 9;
-                    //vspeed = 0;
-                }
+                    move = 9;
                 else if djmp and jump//Do a second jump
                 {   if (arrow==backward+3) or (arrow==backward-3)//Goto back jump
                     or (arrow==backward)
@@ -941,7 +1024,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 else if !heldlr and (arrow==backward or arrow==backward+3)//Goto prepare back air
                 {   move = 21;
-                    //dast = 0;
                     ptate = state;
                 }
                 else if (arrow==forward) or (arrow==forward+3)//Goto prepare forward air
@@ -975,7 +1057,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 ////
                 if grounded//Goto crouching
                 {   move = 9;
-                    //vspeed = 0;
                     dast = 0;
                     dash = 0;
                 }
@@ -996,7 +1077,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 else if dash and (arrow==2)//Goto down air dash
                 {   move = 27;
                     dast = 0;
-                    djmp = 0;
                 }
                 else if dast <= 0//Return to previous state
                 {   move = ptate;
@@ -1025,12 +1105,13 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 ////
                 if grounded//Goto crouching
                 {   move = 9;
-                    //vspeed = 0;
                     dash = 0;
                 }
                 else if dash <= 0//Goto neutral jump
                 {   move = 23;
                     gvy = walk_sp[23] + walk_sp[state];
+                    dash = 0;
+                    airborne = 0;
                 }
                 else//Stay here
                     move = state;
@@ -1043,9 +1124,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto neutral stand
-                {   move = 0;
-                    //vspeed = 0;
-                }
+                    move = 0;
                 else if djmp and jump//Do a second jump
                 {   if arrow == forward//Goto forward jump
                         move = 17;
@@ -1067,9 +1146,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto neutral stand
-                {   move = 0;
-                    //vspeed = 0;
-                }
+                    move = 0;
                 else if djmp and jump//Do a second jump
                 {   if arrow == forward//Goto forward jump
                         move = 17;
@@ -1091,9 +1168,7 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
                 }
                 ////
                 if grounded//Goto neutral stand
-                {   move = 0;
-                    //vspeed = 0;
-                }
+                    move = 0;
                 else if djmp and jump//Do a second jump
                 {   if arrow == forward//Goto forward jump
                         move = 17;
@@ -1118,7 +1193,6 @@ if (buffer_mtr>59) and !(state>=32 and state<64) switch state
     
     //Non-movement, safety net
     default:    move = 0;
-                //hfirm = 0;
 }
 
 //Prepare jump lag
@@ -1133,29 +1207,45 @@ move = 0;
 //Attack type
 if (buffer_mtr>59) and attack
 {   switch state
-    {   //Still attack/special
+    {   //Standing grab/attack/sbecial
         case 0:     //
-        case 1:     //W
-        case 2:     //S
+        case 1:     //GW
+        case 2:     //GS
         case 3:     //B
         case 4:     //
         case 6:     //
         case 7:     if !((arrow==forward) or (arrow==forward+3))
                     {   if attack == 2
-                            move = 64;
+                        {   if shoulder == 1
+                                move = 224;
+                            else
+                                move = 64;
+                        }
                         else if attack == 3
-                            move = 72;
+                        {   if shoulder == 1
+                                move = 232;
+                            else
+                                move = 72;
+                        }
                         else if (attack==1) and goo
                             move = 192;
                     }
-        //Tilt attack/special
+        //Tilt grab/attack/sbecial
                     else
                     {   dast = 0;
                         dash = 0;
                         if attack == 2
-                            move = 80;
+                        {   if shoulder == 1
+                                move = 224;
+                            else
+                                move = 80;
+                        }
                         else if attack == 3
-                            move = 88;
+                        {   if shoulder == 1
+                                move = 232;
+                            else
+                                move = 88;
+                        }
                         else if (attack==1) and goo
                             move = 200;
                     }
@@ -1170,7 +1260,7 @@ if (buffer_mtr>59) and attack
                         move = 104;
                     break;
         
-        //Downward attack/special
+        //Crouching attack/sbecial
         case 9:     if attack == 2
                         move = 112;
                     else if attack == 3
@@ -1179,7 +1269,7 @@ if (buffer_mtr>59) and attack
                         move = 208;
                     break;
         
-        //Upward attack/special
+        //Upper attack/sbecial
         case 10:    if attack == 2
                         move = 128;
                     else if attack == 3
@@ -1209,7 +1299,7 @@ if (buffer_mtr>59) and attack
                         else//(1 2 3)
                             move = 176;
                     }
-                    else if attack==3
+                    else if attack == 3
                     {   if (arrow==backward) or (arrow==backward+3)
                         or (arrow==5)
                             move = 152;
@@ -1224,13 +1314,14 @@ if (buffer_mtr>59) and attack
     
     if move
     {   var cbox;
-        cbox[0] = -1;
+        cbox[0] = noone;
         cbox[1] = move;
-        cbox[10] = 0;
+        cbox[11] = 0;
         ds_list_add(abox,cbox);
+        dask = 0;
     }
     if (move==192) or (move==200) or (move==208) or (move==216)
-    {   bar = floor(bar * bar / (300+40*goo));
+    {   gauge = floor(gauge*gauge / (300+40*goo));
         goo--;
     }
 }
@@ -1238,26 +1329,31 @@ if (buffer_mtr>59) and attack
 move = state;
 
 
-#define BS_defending
+#define BS_reacting
 
 //Blocking and hit confirms
 if oppose.hit_sty
 {   sty = oppose.hit_sty&7;//3 bits(where attacks will hit): 1ground, 2low, 3mid, 4high, 5air
     boc = (oppose.hit_sty>>3)&3;//2 bits(if bounce should occur): 10wall, 01ground
-    hit = oppose.hit_sty>>5;//type of attack
+    hit = (oppose.hit_sty>>5)&63;//type of attack
+    unb = (oppose.hit_sty>>5)&64//1 bit(if unblockable)
     
     if !oppose.combo//First hit
     {   if grounded//Ground based
         {   if (arrow>=1) and (arrow<=3)//Defending low
             {   if (sty==1) or (sty==2) or (sty==3)//Block at ground, low, medium
-                {   if shoulder == 1
+                {   if unb
+                    {   move = hit;
+                        sty = 0;
+                    }
+                    else if shoulder == 1
                     {   if trig_ps//Ground perfect shield
                             move = 33;
                         else
                             move = 35;
                         sty = 1;
                     }
-                    else if arrow == (backward-3)
+                    else if !(shoulder==2) and (arrow==backward-3)
                     {   move = 35;
                         sty = 0.5;
                     }
@@ -1288,7 +1384,11 @@ if oppose.hit_sty
             ////
             else if (arrow>=4) and (arrow<=6)//Defending medium
             {   if (sty==1) or (sty==2)//Bypass at ground, low
-                {   if trig_ps and (shoulder==1)//Ground perfect shield
+                {   if unb
+                    {   move = hit;
+                        sty = 0;
+                    }
+                    else if trig_ps and (shoulder==1)//Ground perfect shield
                     {   move = 33;
                         sty = 1;
                     }
@@ -1305,7 +1405,7 @@ if oppose.hit_sty
                             move = 36;
                         sty = 1;
                     }
-                    else if arrow == (backward-3)
+                    else if !(shoulder==2) and (arrow==backward-3)
                     {   move = 36;
                         sty = 0.5;
                     }
@@ -1320,7 +1420,11 @@ if oppose.hit_sty
             ////
             else//Defending high
             {   if (sty==1) or (sty==2) or (sty==3)//Bypass at ground, low, medium
-                {   if trig_ps and (shoulder==1)//Ground perfect shield
+                {   if unb
+                    {   move = hit;
+                        sty = 0;
+                    }
+                    else if trig_ps and (shoulder==1)//Ground perfect shield
                     {   move = 33;
                         sty = 1;
                     }
@@ -1349,7 +1453,11 @@ if oppose.hit_sty
         
         else//Air based
         {   if (sty>=2 and sty<=5)//Block at low, medium, high, air
-            {   if trig_ps and (shoulder==1)//Air perfect shield
+            {   if unb
+                {   move = hit;
+                    sty = 0;
+                }
+                if trig_ps and (shoulder==1)//Air perfect shield
                 {   move = 34;
                     sty = 1;
                 }
@@ -1398,13 +1506,28 @@ if oppose.hit_sty
     if sty >= 0//Confirm hit to self
     {   oppose.combo++;
         gvy = 0;
+        if cancel != 1
+        {   if !cancel
+                cancel = 1;
+            else
+                cancel += 1;
+        }
         hspeed = 0;
         vspeed = 0;
-        if sty
+        if sty//?//FIX UP BEING LOW
+        ////////////////
         {   if (hit==38) or (hit==39)
                 brek = hit + 2;
             else
                 brek = hit;
+        }
+    }
+    else if rem.hit < 0//Deconfirm hit
+    {   var cbox = oppose.abox[|-(rem.hit+1)];
+        cbox[@10] = 0;
+        if !is_undefined(oppose.abox[|-rem.hit])
+        {   ds_list_delete(oppose.abox,-rem.hit);
+            oppose.buffer_mtr = hsphit - 1;
         }
     }
     oppose.hit_sty = 0;
@@ -1503,7 +1626,6 @@ if (state>=32 and state<64) switch state
                     if grounded//Goto tech lay
                     {   move = 51;
                         utate = state;
-                        //vspeed = 0;
                     }
                     else if buffer_mtr > 59//Goto neutral jump
                     {   move = 23;
@@ -1530,7 +1652,6 @@ if (state>=32 and state<64) switch state
                     if grounded//Goto tech lay
                     {   move = 51;
                         utate = state;
-                        //vspeed = 0;
                     }
                     else if buffer_mtr > 59//Goto tech air neutral
                     {   move = 59;
@@ -1542,6 +1663,7 @@ if (state>=32 and state<64) switch state
                 break;
                 
     //Hit force lay
+    //FIX///////////////////NOTHING IN 51
     case 46:    if hlag < 0//Goto hit lag
                 {   move = 32;
                     utate = state;
@@ -1570,7 +1692,6 @@ if (state>=32 and state<64) switch state
                     if grounded//Goto tech lay
                     {   move = 51;
                         utate = state;
-                        //vspeed = 0;
                     }
                     else//Stay here
                         move = state;
@@ -1592,7 +1713,6 @@ if (state>=32 and state<64) switch state
                     if grounded//Goto tech lay
                     {   move = 51;
                         utate = state;
-                        //vspeed = 0;
                     }
                     else if (buffer_mtr>59) and jump//Air-recoverable
                     {   if (arrow==forward+3) or (arrow==forward-3)//Goto tech air forward
@@ -1613,6 +1733,7 @@ if (state>=32 and state<64) switch state
                 break;
                 
     //Tech lay
+    //FIX////////////////////SOME BOUNCE AND LAY STAY DOWN
     case 51:    if (utate==47) or (utate==50) or (utate==52) or (utate==53)//Recoverable
                 {   if shoulder == 1
                     {   if (arrow==forward+3) or (arrow==forward-3)//Goto tech ground forward
@@ -1684,7 +1805,6 @@ if (state>=32 and state<64) switch state
                 if grounded//Goto tech lay
                 {   move = 51;
                     utate = state;
-                    //vspeed = 0;
                 }
                 break;
                 
@@ -1695,7 +1815,6 @@ if (state>=32 and state<64) switch state
                 if grounded//Goto tech lay
                 {   move = 51;
                     utate = state;
-                    //vspeed = 0;
                 }
                 else if (buffer_mtr>59) and jump//Air-recoverable
                 {   if (arrow==forward+3) or (arrow==forward-3)//Goto tech air forward
@@ -1721,7 +1840,6 @@ if (state>=32 and state<64) switch state
                 if grounded//Goto tech lay
                 {   move = 51;
                     utate = state;
-                    //vspeed = 0;
                 }
                 else if jump//Air-recoverable
                 {   if (arrow==forward+3) or (arrow==forward-3)//Goto tech air forward
@@ -1785,13 +1903,14 @@ if (state>=32 and state<64) switch state
                 
     //Tech air neutral
     case 59:    hspeed = 2 * (backward-5);
-                vspeed = -2 + gvy;
+                vspeed = -10 * grav;
                 ////
                 if buffer_mtr > 59//Goto neutral jump
                 {   move = 23;
                     airborne = 1;
                     gvydam = 0;
                     heldlr = 0;
+                    //vspeed = gvy/2;
                 }
                 else//Stay here
                     move = state;
@@ -1799,13 +1918,14 @@ if (state>=32 and state<64) switch state
                 
     //Tech air forward
     case 60:    hspeed = walk_sp[state] * (forward-5);
-                vspeed = -2 + gvy;
+                vspeed = -10 * grav;
                 ////
                 if buffer_mtr > 59//Goto neutral jump
                 {   move = 23;
                     airborne = 1;
                     gvydam = 0;
                     heldlr = 1;
+                    //vspeed = gvy/2;
                 }
                 else//Stay here
                     move = state;
@@ -1813,18 +1933,84 @@ if (state>=32 and state<64) switch state
                 
     //Tech air backward
     case 61:    hspeed = walk_sp[state] * (backward-5);
-                vspeed = -2 + gvy;
+                vspeed = -10 * grav;
                 ////
                 if buffer_mtr > 59//Goto neutral jump
                 {   move = 23;
                     airborne = 1;
                     gvydam = 0;
                     heldlr = 1;
+                    //vspeed = gvy/2;
                 }
                 else//Stay here
                     move = state;
                 break;
+                
+    //Unique reaction
+    case 62:    hspeed = 0;
+                vspeed = 0;
+                ////
+                buffer_mtr -= 1;
+                move = state;
+                break;
 }
 
 state = move;
+
+
+#define BS_cleanup
+
+var nbox = argument0;
+if is_array(nbox)
+{   if instance_exists(hbox) and !hbox.visible//Remove canceled attacks
+    {   cbox = 0;
+        ds_list_delete(abox,i);
+        with hbox instance_destroy();
+    }
+    else
+    {   if nbox[1]//Add new attacks
+        {   nbox[0] = noone;
+            nbox[11] = 0;
+            if !nbox[2]
+                buffer_mtr = 58;
+            cancel = 2;
+            ds_list_add(abox,nbox);
+        }
+        if frame == 6//Remove old attacks
+        {   cbox = 0;
+            ds_list_delete(abox,i);
+        }
+        else//Update current attacks
+        {   cbox[2] = frame;
+            cbox[3] = buffer_af;
+            cbox[4] = htx;
+            cbox[5] = hty;
+            cbox[6] = hzx;
+            cbox[7] = hzy;
+            cbox[8] = s_part;
+            cbox[9] = t_part;
+            cbox[10] = hfirm;
+        }
+    }
+}
+
+else
+{   //Break checking
+    if abs(dask)
+    {   hspeed = dask;
+        vspeed = 0;
+        //lifted = 0;//?
+    }
+    
+    //Wall checking
+    if walled
+    {   if hspeed*(walled-2) <= 0
+            hspeed = 0;
+        else
+            x += (walled-2);
+    }
+}
+
+hrbx.x = x + hspeed;
+hrbx.y = y + vspeed;
 
