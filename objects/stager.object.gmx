@@ -270,12 +270,14 @@ if g_ready and !m_pause
     
     else if donce//Move again after pause or lag
     {   instance_activate_object(player_one);
+        instance_activate_object(player_one.hrbx);
         with player_one if ds_list_size(abox)
         for (var i=ds_list_size(abox)-1;i&gt;=0;i--)
         {   var cbox = abox[|i];
             instance_activate_object(cbox[0]);
         }
         instance_activate_object(player_two);
+        instance_activate_object(player_two.hrbx);
         with player_two if ds_list_size(abox)
         for (i=ds_list_size(abox)-1;i&gt;=0;i--)
         {   cbox = abox[|i];
@@ -372,6 +374,7 @@ if !(g_ready and !m_pause) and !alarm[1]
             {   var cbox = abox[|i];
                 instance_deactivate_object(cbox[0]);
             }
+            instance_deactivate_object(hrbx);
             instance_deactivate_object(self);
         }
         with player_two
@@ -380,6 +383,7 @@ if !(g_ready and !m_pause) and !alarm[1]
             {   cbox = abox[|i];
                 instance_deactivate_object(cbox[0]);
             }
+            instance_deactivate_object(hrbx);
             instance_deactivate_object(self);
         }
         donce++;
@@ -493,7 +497,7 @@ repeat 1 + abs(trade)
         P.raw = raw;
         P.output = output;
         P.dotal = dotal;
-        P.dombo = dombo * (O.sty==0);
+        P.dombo = dombo * (O.sty&lt;=0);
         
         //Opponent escapes, dropping or interrupt, or blocks at start
         if (O.buffer_mtr&gt;59) or abs(trade) or (O.sty&gt;0)
