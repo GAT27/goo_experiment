@@ -100,6 +100,7 @@ for (var i=ds_list_size(abox)-1;i>=0;i--)
         }
     } 
     cancel = floor(cancel/2);
+    //real time update testing
 }
 
 
@@ -2013,4 +2014,3 @@ else
 
 hrbx.x = x + hspeed;
 hrbx.y = y + vspeed;
-
