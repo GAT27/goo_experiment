@@ -12,7 +12,7 @@ Development preview, need to import [gmz](https://github.com/GAT27/goo_experimen
 * Player 2 (keyboard): WASD - move, Space - jump, M - weak attack, K - strong attack, P - sbecial attack,
 Q - shield, E - Charge, R - start/pause match.
 
-#Pausing
+#Pausing:
 
 Pressing "start" for 6 frames will pause the game, then either press "jump" to end match or "start" to unpause.
 
@@ -94,7 +94,7 @@ client-client hairpin loop (some routers may not support this).
   * **I** Blocking: Block low and mid; hold back for less damage (like SF)
   * **W->/** Perfect shield: Block ground and air; no damage or hitstun (like 3rd Strike)
   * **I** Passive charging: Buff up strong attacks and gain armor, but lose defense options
-  * **P->N**Special charging: Buff up specials, but stays still
+  * **P->N** Special charging: Buff up specials, but stays still
   * **I** Stocks: How many times you can get tired (similiar to Smash), charging gets faster, lose at 0
   * **I** Health: Lose at 0
   * **L->N** Ailment: Negative status effects
@@ -106,3 +106,6 @@ client-client hairpin loop (some routers may not support this).
   * **P->W** Break shift: Use boost to return to neutral and have a few frames to move (like JojoASB)
   * **L->/** Break ghost: Use a bar and boost to send a copy to attack while you move about
   * **NEXTTIME:/->P** Cores: Sacrifice starting stats for extra benefits
+
+4. Animations
+  * **/->N** Character will be given proper model, animations, and hurtbox.
