@@ -1,6 +1,6 @@
 Goo
 ==============
-Development preview, need to import [gmz](https://github.com/GAT27/goo_experiment/blob/master/Experiment_Goo_Q6.gmz?raw=true) file into GameMaker Studio to play/test. As of V1.99.344, GUI is broken again and online is not connecting properly.
+Development preview, need to import [gmz](https://github.com/GAT27/goo_experiment/blob/master/Experiment_Goo_Q6.gmz?raw=true) file into GameMaker Studio to play/test. As of V1.99.344, GUI is broken again.
 
 #Controls:
 
@@ -33,7 +33,7 @@ Each player selects a character (top 7 boxes) with "jump", once both are selecte
 Press "charge" to replay an online/local match, make sure to start a match first on new system, only 1 match is stored,
 online takes priority.
 
-#Online (currently not working):
+#Online:
 
 Select the yellow box to go online, then choose to host (with username selected at start) or join someone else's lobby.
 Select the green box to go offline, by hosting and leaving, you can go online and join your own lobby and play as a
@@ -45,7 +45,7 @@ client-client hairpin loop (some routers may not support this).
 
 2. **ADJUSTED** Sbecial attacking with certain directional inputs. {Moves not yet programmed, crash}
 
-3. **FIXED** Attacking just at the end of recovery then attacking twice. (semi-hard). {Out of bound access, crash}
+3. **FIXED** Attacking just at the end of recovery then attacking twice (semi-hard). {Out of bound access, crash}
 
 4. **FIXED** Certain air attacks will cause you to fly or land fast. {Moves not yet programmed, end match}
 
@@ -57,6 +57,10 @@ client-client hairpin loop (some routers may not support this).
 {Collision issue, end match}
 
 8. **NEW** Grabbing each other at the exact same time freezes players. {Case scenario not programmed, end match}
+
+9. Memory leakage during online setup. {Improper memory cleaning, runs normally}
+
+10. Online may desync. {Early netcode issus, runs normally}
 
 #Progress:
 
