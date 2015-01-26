@@ -73,9 +73,9 @@ enum E
 }
 
 scr_create_animation_vertex_format();
-global.shader_interpol = shader_get_uniform(sh_blend, "u_interpol");
+global.shader_interpol = shader_get_uniform(sh_blend,"u_interpol");
 display_reset(2,false);
-get_string_async("Create a username (letters only)","GoodPlayer");
+get_string_async("Create a username (alphanumeric only)","GoodPlayer");
 
 </string>
           </argument>
@@ -104,11 +104,9 @@ get_string_async("Create a username (letters only)","GoodPlayer");
 ini_open("controller.ini");
 if ds_map_find_value(async_load,"status")
     ini_write_string("user","name",
-                     string_letters(ds_map_find_value(async_load,"result")));
+                     string_lettersdigits(ds_map_find_value(async_load,"result")));
 else
-{   ini_write_string("user","name","RandomBum");
-    //audio_play_sound(sound0,1,false);
-}
+    ini_write_string("user","name","RandomBum");
 ini_close();
 room_goto_next();
 
