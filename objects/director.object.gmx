@@ -43,7 +43,7 @@ ini_open("controller.ini");
 username = ini_read_string("user","name","");
 ini_close();
 buffer_pak = buffer_create(8,buffer_fixed,1);//in B: r[cccC]|w[]
-site = "http://gatq.me/server_work/goo/storage.php?game="+string(game_id);
+site = "http://gatq.me/server_work/storage.php?game="+string(game_id);
 
 /*punch(p) changes over time to represent different changes
 p &gt;= +3: Character p-1 selected, wait for resend
